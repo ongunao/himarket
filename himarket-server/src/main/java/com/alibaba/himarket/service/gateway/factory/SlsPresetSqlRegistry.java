@@ -23,15 +23,17 @@ import java.util.HashMap;
 import java.util.Map;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
- * 预置场景SQL注册表 说明： - 场景名作为前后端契约（如：pv、uv、qps_total） - 每个场景包含展示类型、预设SQL、必要的字段别名（用于时序图） - 严格忽略
+ * SLS 预置场景SQL注册表 说明： - 场景名作为前后端契约（如：pv、uv、qps_total） - 每个场景包含展示类型、预设SQL、必要的字段别名（用于时序图） - 严格忽略
  * cluster_id 与 ai_log.api 两个过滤条件，其余保留 - 注释说明每个场景查询的含义，便于维护与扩展
  */
 @Component
 @Slf4j
-public class SlsPresetSqlRegistry {
+@ConditionalOnProperty(name = "observability.backend", havingValue = "sls", matchIfMissing = true)
+public class SlsPresetSqlRegistry implements PresetSqlRegistry {
 
     /** 展示类型 */
     @Getter

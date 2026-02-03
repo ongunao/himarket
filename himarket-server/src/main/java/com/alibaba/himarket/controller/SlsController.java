@@ -19,13 +19,13 @@
 
 package com.alibaba.himarket.controller;
 
-import com.alibaba.himarket.config.SlsConfig;
 import com.alibaba.himarket.dto.converter.SlsResponseConverter;
 import com.alibaba.himarket.dto.params.sls.GenericSlsQueryRequest;
 import com.alibaba.himarket.dto.params.sls.GenericSlsQueryResponse;
 import com.alibaba.himarket.dto.params.sls.ScenarioQueryResponse;
 import com.alibaba.himarket.dto.params.sls.TimeSeriesChartResponse;
-import com.alibaba.himarket.service.SlsLogService;
+import com.alibaba.himarket.service.LogQueryService;
+import com.alibaba.himarket.service.gateway.factory.PresetSqlRegistry;
 import com.alibaba.himarket.service.gateway.factory.SlsPresetSqlRegistry;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -40,27 +40,26 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "SLS可观测", description = "提供基于日志的可观测大盘查询能力、计量、日志检索")
+@Tag(name = "可观测", description = "提供基于日志的可观测大盘查询能力、计量、日志检索")
 @RestController
 @RequestMapping("/sls")
 @Slf4j
 @RequiredArgsConstructor
 public class SlsController {
 
-    private final SlsLogService slsLogService;
+    private final LogQueryService logQueryService;
 
-    private final SlsPresetSqlRegistry presetRegistry;
-
-    private final SlsConfig slsConfig;
+    private final PresetSqlRegistry presetRegistry;
 
     @PostMapping("/statistics")
     @Operation(summary = "日志转指标聚合查询")
     public ScenarioQueryResponse slsScenarioQuery(
             @RequestBody @Validated GenericSlsQueryRequest request) {
-        // SLS未配置时优雅降级,避免大量错误日志
-        if (!slsConfig.isConfigured()) {
+        // 日志后端未配置时优雅降级,避免大量错误日志
+        if (!logQueryService.isConfigured()) {
             log.debug(
-                    "SLS endpoint not configured, returning empty result for scenario: {}",
+                    "Log backend ({}) not configured, returning empty result for scenario: {}",
+                    logQueryService.getBackendType(),
                     request.getScenario());
             return buildEmptyResponse(request.getScenario());
         }
@@ -74,7 +73,7 @@ public class SlsController {
         }
         // 应用预置SQL
         request.setSql(preset.getSql());
-        GenericSlsQueryResponse response = slsLogService.executeQuery(request);
+        GenericSlsQueryResponse response = logQueryService.executeQuery(request);
         Integer interval = request.getInterval() != null ? request.getInterval() : 60;
         ScenarioQueryResponse resp;
         switch (preset.getType()) {

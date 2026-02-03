@@ -61,13 +61,15 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-/** 通用SLS日志查询服务实现 */
+/** SLS日志查询服务实现 */
 @Service
 @Slf4j
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "observability.backend", havingValue = "sls", matchIfMissing = true)
 public class SlsLogServiceImpl implements SlsLogService {
 
     private static final String ALIYUN_LOG_CONFIG_CRD_NAME =
@@ -251,6 +253,16 @@ public class SlsLogServiceImpl implements SlsLogService {
         genericRequest.setSql(request.getSql());
         genericRequest.setPageSize(request.getPageSize());
         return executeQuery(genericRequest);
+    }
+
+    @Override
+    public boolean isConfigured() {
+        return slsConfig.isConfigured();
+    }
+
+    @Override
+    public String getBackendType() {
+        return "sls";
     }
 
     @Override

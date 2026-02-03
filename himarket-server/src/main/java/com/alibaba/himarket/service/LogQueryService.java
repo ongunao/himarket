@@ -19,35 +19,43 @@
 
 package com.alibaba.himarket.service;
 
-import com.alibaba.himarket.dto.params.sls.SlsCheckLogstoreRequest;
-import com.alibaba.himarket.dto.params.sls.SlsCheckProjectRequest;
+import com.alibaba.himarket.dto.params.sls.GenericSlsQueryRequest;
+import com.alibaba.himarket.dto.params.sls.GenericSlsQueryResponse;
+import com.alibaba.himarket.dto.params.sls.SlsCommonQueryRequest;
 
 /**
- * SLS日志查询服务接口
- * 继承通用日志查询接口，并提供SLS特有的功能
+ * 通用日志查询服务接口
+ * 支持多种日志后端实现（SLS、Doris等）
  */
-public interface SlsLogService extends LogQueryService {
+public interface LogQueryService {
 
     /**
-     * 检查Project是否存在
+     * 执行通用SQL查询
      *
-     * @param request 查询请求（包含认证信息）
-     * @return 是否存在
+     * @param request 查询请求
+     * @return 查询结果
      */
-    Boolean checkProjectExists(SlsCheckProjectRequest request);
+    GenericSlsQueryResponse executeQuery(GenericSlsQueryRequest request);
 
     /**
-     * 检查Logstore是否存在
+     * 执行通用SQL查询
      *
-     * @param request 查询请求（包含认证信息）
-     * @return 是否存在
+     * @param request 查询请求
+     * @return 查询结果
      */
-    Boolean checkLogstoreExists(SlsCheckLogstoreRequest request);
+    GenericSlsQueryResponse executeQuery(SlsCommonQueryRequest request);
 
     /**
-     * 为全局日志的 logstore 更新索引 使用配置中心的 project 和 logstore
+     * 检查日志后端是否已配置
      *
-     * @param userId 用户ID（用于STS认证）
+     * @return true表示配置有效, false表示配置无效
      */
-    void updateLogIndex(String userId);
+    boolean isConfigured();
+
+    /**
+     * 获取后端类型标识
+     *
+     * @return 后端类型，如 "sls" 或 "doris"
+     */
+    String getBackendType();
 }

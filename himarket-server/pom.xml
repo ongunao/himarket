@@ -210,6 +210,13 @@
             <artifactId>caffeine</artifactId>
         </dependency>
 
+        <!-- MySQL JDBC Driver for Doris (uses MySQL protocol) -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- Spring Boot Configuration Processor for IDE support -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

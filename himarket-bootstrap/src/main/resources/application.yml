@@ -40,6 +40,11 @@ jwt:
   secret: YourJWTSecret
   expiration: 2h
 
+# 可观测性配置
+observability:
+  # 日志查询后端: sls 或 doris
+  backend: ${OBSERVABILITY_BACKEND:sls}
+
 sls:
   # SLS服务端点（必填）
   # cn-chengdu.log.aliyuncs.com
@@ -59,3 +64,17 @@ sls:
     namespace: ${SLS_ALIYUN_LOG_CONFIG_NAMESPACE:apigateway-system}
     # CR的名称
     cr-name: ${SLS_ALIYUN_LOG_CONFIG_CR_NAME:apigateway-access-log}
+
+# Doris 配置（仅当 observability.backend=doris 时生效）
+doris:
+  # JDBC 连接URL，例如: jdbc:mysql://127.0.0.1:9030/log_db
+  jdbc-url: ${DORIS_JDBC_URL:}
+  username: ${DORIS_USERNAME:root}
+  password: ${DORIS_PASSWORD:}
+  database: ${DORIS_DATABASE:log_db}
+  # 日志表名
+  table-name: ${DORIS_TABLE_NAME:gateway_access_log}
+  # 时间字段名
+  time-field: ${DORIS_TIME_FIELD:log_time}
+  # 查询超时时间（秒）
+  query-timeout: ${DORIS_QUERY_TIMEOUT:30}
