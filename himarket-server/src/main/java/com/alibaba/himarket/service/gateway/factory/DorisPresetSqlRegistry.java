@@ -99,8 +99,9 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                 new SlsPresetSqlRegistry.Preset(
                         "input_token_total",
                         SlsPresetSqlRegistry.DisplayType.CARD,
-                        "SELECT SUM(ai_input_token) as input_token FROM {table} WHERE {timeFilter}"
-                                + " AND ai_model IS NOT NULL",
+                        "SELECT SUM(CAST(json_extract_string(ai_log, '$.input_token') AS BIGINT))"
+                                + " as input_token FROM {table} WHERE {timeFilter} AND"
+                                + " json_extract_string(ai_log, '$.model') IS NOT NULL",
                         null,
                         null));
 
@@ -110,8 +111,9 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                 new SlsPresetSqlRegistry.Preset(
                         "output_token_total",
                         SlsPresetSqlRegistry.DisplayType.CARD,
-                        "SELECT SUM(ai_output_token) as output_token FROM {table} WHERE"
-                                + " {timeFilter} AND ai_model IS NOT NULL",
+                        "SELECT SUM(CAST(json_extract_string(ai_log, '$.output_token') AS BIGINT))"
+                                + " as output_token FROM {table} WHERE {timeFilter} AND"
+                                + " json_extract_string(ai_log, '$.model') IS NOT NULL",
                         null,
                         null));
 
@@ -121,8 +123,10 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                 new SlsPresetSqlRegistry.Preset(
                         "token_total",
                         SlsPresetSqlRegistry.DisplayType.CARD,
-                        "SELECT SUM(ai_input_token) + SUM(ai_output_token) as token FROM {table}"
-                                + " WHERE {timeFilter} AND ai_model IS NOT NULL",
+                        "SELECT SUM(CAST(json_extract_string(ai_log, '$.input_token') AS BIGINT))"
+                                + " + SUM(CAST(json_extract_string(ai_log, '$.output_token') AS"
+                                + " BIGINT)) as token FROM {table} WHERE {timeFilter} AND"
+                                + " json_extract_string(ai_log, '$.model') IS NOT NULL",
                         null,
                         null));
 
@@ -136,7 +140,8 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                         SlsPresetSqlRegistry.DisplayType.LINE,
                         "SELECT DATE_FORMAT({timeField}, '%Y-%m-%d %H:%i:00') AS time, "
                                 + "CAST(COUNT(*) AS DOUBLE) / {interval} AS stream_qps "
-                                + "FROM {table} WHERE {timeFilter} AND ai_response_type = 'stream' "
+                                + "FROM {table} WHERE {timeFilter} AND"
+                                + " json_extract_string(ai_log, '$.response_type') = 'stream' "
                                 + "GROUP BY time ORDER BY time",
                         "time",
                         "stream_qps"));
@@ -149,7 +154,8 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                         SlsPresetSqlRegistry.DisplayType.LINE,
                         "SELECT DATE_FORMAT({timeField}, '%Y-%m-%d %H:%i:00') AS time, "
                                 + "CAST(COUNT(*) AS DOUBLE) / {interval} AS normal_qps "
-                                + "FROM {table} WHERE {timeFilter} AND ai_response_type = 'normal' "
+                                + "FROM {table} WHERE {timeFilter} AND"
+                                + " json_extract_string(ai_log, '$.response_type') = 'normal' "
                                 + "GROUP BY time ORDER BY time",
                         "time",
                         "normal_qps"));
@@ -162,7 +168,8 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                         SlsPresetSqlRegistry.DisplayType.LINE,
                         "SELECT DATE_FORMAT({timeField}, '%Y-%m-%d %H:%i:00') AS time,"
                                 + " CAST(COUNT(*) AS DOUBLE) / {interval} AS total_qps FROM {table}"
-                                + " WHERE {timeFilter} AND ai_response_type IN ('stream', 'normal')"
+                                + " WHERE {timeFilter} AND json_extract_string(ai_log,"
+                                + " '$.response_type') IN ('stream', 'normal')"
                                 + " GROUP BY time ORDER BY time",
                         "time",
                         "total_qps"));
@@ -187,7 +194,8 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                         "token_per_sec_input",
                         SlsPresetSqlRegistry.DisplayType.LINE,
                         "SELECT DATE_FORMAT({timeField}, '%Y-%m-%d %H:%i:00') AS time, "
-                                + "SUM(ai_input_token) / {interval} AS input_token "
+                                + "SUM(CAST(json_extract_string(ai_log, '$.input_token') AS"
+                                + " BIGINT)) / {interval} AS input_token "
                                 + "FROM {table} WHERE {timeFilter} "
                                 + "GROUP BY time ORDER BY time",
                         "time",
@@ -200,7 +208,8 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                         "token_per_sec_output",
                         SlsPresetSqlRegistry.DisplayType.LINE,
                         "SELECT DATE_FORMAT({timeField}, '%Y-%m-%d %H:%i:00') AS time, "
-                                + "SUM(ai_output_token) / {interval} AS output_token "
+                                + "SUM(CAST(json_extract_string(ai_log, '$.output_token') AS"
+                                + " BIGINT)) / {interval} AS output_token "
                                 + "FROM {table} WHERE {timeFilter} "
                                 + "GROUP BY time ORDER BY time",
                         "time",
@@ -213,9 +222,10 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                         "token_per_sec_total",
                         SlsPresetSqlRegistry.DisplayType.LINE,
                         "SELECT DATE_FORMAT({timeField}, '%Y-%m-%d %H:%i:00') AS time,"
-                            + " (SUM(ai_input_token) + SUM(ai_output_token)) / {interval} AS"
-                            + " total_token FROM {table} WHERE {timeFilter} GROUP BY time ORDER BY"
-                            + " time",
+                            + " (SUM(CAST(json_extract_string(ai_log, '$.input_token') AS BIGINT))"
+                            + " + SUM(CAST(json_extract_string(ai_log, '$.output_token') AS"
+                            + " BIGINT))) / {interval} AS total_token FROM {table} WHERE"
+                            + " {timeFilter} GROUP BY time ORDER BY time",
                         "time",
                         "total_token"));
 
@@ -226,9 +236,10 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                         "rt_avg_total",
                         SlsPresetSqlRegistry.DisplayType.LINE,
                         "SELECT DATE_FORMAT({timeField}, '%Y-%m-%d %H:%i:00') AS time,"
-                            + " AVG(ai_llm_service_duration) AS total_rt FROM {table} WHERE"
-                            + " {timeFilter} AND ai_llm_service_duration IS NOT NULL GROUP BY time"
-                            + " ORDER BY time",
+                            + " AVG(CAST(json_extract_string(ai_log, '$.llm_service_duration') AS"
+                            + " DOUBLE)) AS total_rt FROM {table} WHERE {timeFilter} AND"
+                            + " json_extract_string(ai_log, '$.llm_service_duration') IS NOT NULL"
+                            + " GROUP BY time ORDER BY time",
                         "time",
                         "total_rt"));
 
@@ -239,9 +250,11 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                         "rt_avg_stream",
                         SlsPresetSqlRegistry.DisplayType.LINE,
                         "SELECT DATE_FORMAT({timeField}, '%Y-%m-%d %H:%i:00') AS time,"
-                                + " AVG(ai_llm_service_duration) AS stream_rt FROM {table} WHERE"
-                                + " {timeFilter} AND ai_llm_service_duration IS NOT NULL AND"
-                                + " ai_response_type = 'stream' GROUP BY time ORDER BY time",
+                                + " AVG(CAST(json_extract_string(ai_log, '$.llm_service_duration')"
+                                + " AS DOUBLE)) AS stream_rt FROM {table} WHERE {timeFilter} AND"
+                                + " json_extract_string(ai_log, '$.llm_service_duration') IS NOT"
+                                + " NULL AND json_extract_string(ai_log, '$.response_type') ="
+                                + " 'stream' GROUP BY time ORDER BY time",
                         "time",
                         "stream_rt"));
 
@@ -252,9 +265,11 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                         "rt_avg_normal",
                         SlsPresetSqlRegistry.DisplayType.LINE,
                         "SELECT DATE_FORMAT({timeField}, '%Y-%m-%d %H:%i:00') AS time,"
-                                + " AVG(ai_llm_service_duration) AS normal_rt FROM {table} WHERE"
-                                + " {timeFilter} AND ai_llm_service_duration IS NOT NULL AND"
-                                + " ai_response_type = 'normal' GROUP BY time ORDER BY time",
+                                + " AVG(CAST(json_extract_string(ai_log, '$.llm_service_duration')"
+                                + " AS DOUBLE)) AS normal_rt FROM {table} WHERE {timeFilter} AND"
+                                + " json_extract_string(ai_log, '$.llm_service_duration') IS NOT"
+                                + " NULL AND json_extract_string(ai_log, '$.response_type') ="
+                                + " 'normal' GROUP BY time ORDER BY time",
                         "time",
                         "normal_rt"));
 
@@ -265,9 +280,11 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                         "rt_first_token",
                         SlsPresetSqlRegistry.DisplayType.LINE,
                         "SELECT DATE_FORMAT({timeField}, '%Y-%m-%d %H:%i:00') AS time,"
-                                + " AVG(ai_llm_first_token_duration) AS first_token_rt FROM {table}"
-                                + " WHERE {timeFilter} AND ai_llm_first_token_duration IS NOT NULL"
-                                + " GROUP BY time ORDER BY time",
+                                + " AVG(CAST(json_extract_string(ai_log,"
+                                + " '$.llm_first_token_duration') AS DOUBLE)) AS first_token_rt FROM"
+                                + " {table} WHERE {timeFilter} AND json_extract_string(ai_log,"
+                                + " '$.llm_first_token_duration') IS NOT NULL GROUP BY time ORDER BY"
+                                + " time",
                         "time",
                         "first_token_rt"));
 
@@ -279,7 +296,8 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                         SlsPresetSqlRegistry.DisplayType.LINE,
                         "SELECT DATE_FORMAT({timeField}, '%Y-%m-%d %H:%i:00') AS time, "
                                 + "CAST(COUNT(*) AS DOUBLE) / {interval} AS hit "
-                                + "FROM {table} WHERE {timeFilter} AND ai_cache_status = 'hit' "
+                                + "FROM {table} WHERE {timeFilter} AND"
+                                + " json_extract_string(ai_log, '$.cache_status') = 'hit' "
                                 + "GROUP BY time ORDER BY time",
                         "time",
                         "hit"));
@@ -291,7 +309,8 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                         SlsPresetSqlRegistry.DisplayType.LINE,
                         "SELECT DATE_FORMAT({timeField}, '%Y-%m-%d %H:%i:00') AS time, "
                                 + "CAST(COUNT(*) AS DOUBLE) / {interval} AS miss "
-                                + "FROM {table} WHERE {timeFilter} AND ai_cache_status = 'miss' "
+                                + "FROM {table} WHERE {timeFilter} AND"
+                                + " json_extract_string(ai_log, '$.cache_status') = 'miss' "
                                 + "GROUP BY time ORDER BY time",
                         "time",
                         "miss"));
@@ -303,7 +322,8 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                         SlsPresetSqlRegistry.DisplayType.LINE,
                         "SELECT DATE_FORMAT({timeField}, '%Y-%m-%d %H:%i:00') AS time, "
                                 + "CAST(COUNT(*) AS DOUBLE) / {interval} AS skip "
-                                + "FROM {table} WHERE {timeFilter} AND ai_cache_status = 'skip' "
+                                + "FROM {table} WHERE {timeFilter} AND"
+                                + " json_extract_string(ai_log, '$.cache_status') = 'skip' "
                                 + "GROUP BY time ORDER BY time",
                         "time",
                         "skip"));
@@ -316,8 +336,9 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                         SlsPresetSqlRegistry.DisplayType.LINE,
                         "SELECT DATE_FORMAT({timeField}, '%Y-%m-%d %H:%i:00') AS time,"
                             + " CAST(COUNT(*) AS DOUBLE) / {interval} AS ratelimited FROM {table}"
-                            + " WHERE {timeFilter} AND ai_token_ratelimit_status = 'limited' GROUP"
-                            + " BY time ORDER BY time",
+                            + " WHERE {timeFilter} AND json_extract_string(ai_log,"
+                            + " '$.token_ratelimit_status') = 'limited' GROUP BY time ORDER BY"
+                            + " time",
                         "time",
                         "ratelimited"));
 
@@ -407,13 +428,18 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                 new SlsPresetSqlRegistry.Preset(
                         "model_token_table",
                         SlsPresetSqlRegistry.DisplayType.TABLE,
-                        "SELECT ai_model AS model, "
-                                + "SUM(ai_input_token) AS input_token, "
-                                + "SUM(ai_output_token) AS output_token, "
-                                + "SUM(ai_input_token) + SUM(ai_output_token) AS total_token, "
+                        "SELECT json_extract_string(ai_log, '$.model') AS model, "
+                                + "SUM(CAST(json_extract_string(ai_log, '$.input_token') AS"
+                                + " BIGINT)) AS input_token, "
+                                + "SUM(CAST(json_extract_string(ai_log, '$.output_token') AS"
+                                + " BIGINT)) AS output_token, "
+                                + "SUM(CAST(json_extract_string(ai_log, '$.input_token') AS"
+                                + " BIGINT)) + SUM(CAST(json_extract_string(ai_log,"
+                                + " '$.output_token') AS BIGINT)) AS total_token, "
                                 + "COUNT(*) AS request "
-                                + "FROM {table} WHERE {timeFilter} AND ai_model IS NOT NULL "
-                                + "GROUP BY ai_model ORDER BY total_token DESC",
+                                + "FROM {table} WHERE {timeFilter} AND"
+                                + " json_extract_string(ai_log, '$.model') IS NOT NULL "
+                                + "GROUP BY model ORDER BY total_token DESC",
                         null,
                         null));
 
@@ -423,12 +449,17 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                 new SlsPresetSqlRegistry.Preset(
                         "consumer_token_table",
                         SlsPresetSqlRegistry.DisplayType.TABLE,
-                        "SELECT consumer, "
-                                + "SUM(ai_input_token) AS input_token, "
-                                + "SUM(ai_output_token) AS output_token, "
-                                + "SUM(ai_input_token) + SUM(ai_output_token) AS total_token, "
+                        "SELECT json_extract_string(ai_log, '$.consumer') AS consumer, "
+                                + "SUM(CAST(json_extract_string(ai_log, '$.input_token') AS"
+                                + " BIGINT)) AS input_token, "
+                                + "SUM(CAST(json_extract_string(ai_log, '$.output_token') AS"
+                                + " BIGINT)) AS output_token, "
+                                + "SUM(CAST(json_extract_string(ai_log, '$.input_token') AS"
+                                + " BIGINT)) + SUM(CAST(json_extract_string(ai_log,"
+                                + " '$.output_token') AS BIGINT)) AS total_token, "
                                 + "COUNT(*) AS request "
-                                + "FROM {table} WHERE {timeFilter} AND consumer IS NOT NULL "
+                                + "FROM {table} WHERE {timeFilter} AND"
+                                + " json_extract_string(ai_log, '$.consumer') IS NOT NULL "
                                 + "GROUP BY consumer ORDER BY total_token DESC",
                         null,
                         null));
@@ -440,11 +471,16 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                         "service_token_table",
                         SlsPresetSqlRegistry.DisplayType.TABLE,
                         "SELECT upstream_cluster, "
-                                + "SUM(ai_input_token) AS input_token, "
-                                + "SUM(ai_output_token) AS output_token, "
-                                + "SUM(ai_input_token) + SUM(ai_output_token) AS total_token, "
+                                + "SUM(CAST(json_extract_string(ai_log, '$.input_token') AS"
+                                + " BIGINT)) AS input_token, "
+                                + "SUM(CAST(json_extract_string(ai_log, '$.output_token') AS"
+                                + " BIGINT)) AS output_token, "
+                                + "SUM(CAST(json_extract_string(ai_log, '$.input_token') AS"
+                                + " BIGINT)) + SUM(CAST(json_extract_string(ai_log,"
+                                + " '$.output_token') AS BIGINT)) AS total_token, "
                                 + "COUNT(*) AS request "
-                                + "FROM {table} WHERE {timeFilter} AND ai_model IS NOT NULL "
+                                + "FROM {table} WHERE {timeFilter} AND"
+                                + " json_extract_string(ai_log, '$.model') IS NOT NULL "
                                 + "GROUP BY upstream_cluster ORDER BY total_token DESC",
                         null,
                         null));
@@ -468,9 +504,10 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                 new SlsPresetSqlRegistry.Preset(
                         "ratelimited_consumer_table",
                         SlsPresetSqlRegistry.DisplayType.TABLE,
-                        "SELECT ai_consumer AS consumer, COUNT(*) AS ratelimited_count FROM {table}"
-                            + " WHERE {timeFilter} AND ai_token_ratelimit_status = 'limited' GROUP"
-                            + " BY ai_consumer ORDER BY ratelimited_count DESC",
+                        "SELECT json_extract_string(ai_log, '$.consumer') AS consumer, COUNT(*) AS"
+                            + " ratelimited_count FROM {table} WHERE {timeFilter} AND"
+                            + " json_extract_string(ai_log, '$.token_ratelimit_status') = 'limited'"
+                            + " GROUP BY consumer ORDER BY ratelimited_count DESC",
                         null,
                         null));
 
@@ -480,9 +517,10 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                 new SlsPresetSqlRegistry.Preset(
                         "risk_label_table",
                         SlsPresetSqlRegistry.DisplayType.TABLE,
-                        "SELECT ai_safecheck_risklabel AS risklabel, COUNT(*) AS cnt FROM {table}"
-                                + " WHERE {timeFilter} AND ai_safecheck_status = 'deny' GROUP BY"
-                                + " ai_safecheck_risklabel ORDER BY cnt DESC",
+                        "SELECT json_extract_string(ai_log, '$.safecheck_riskLabel') AS risklabel,"
+                                + " COUNT(*) AS cnt FROM {table} WHERE {timeFilter} AND"
+                                + " json_extract_string(ai_log, '$.safecheck_status') = 'deny'"
+                                + " GROUP BY risklabel ORDER BY cnt DESC",
                         null,
                         null));
 
@@ -492,9 +530,10 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                 new SlsPresetSqlRegistry.Preset(
                         "risk_consumer_table",
                         SlsPresetSqlRegistry.DisplayType.TABLE,
-                        "SELECT ai_consumer AS consumer, COUNT(*) AS cnt FROM {table} WHERE"
-                            + " {timeFilter} AND ai_safecheck_status = 'deny' GROUP BY ai_consumer"
-                            + " ORDER BY cnt DESC",
+                        "SELECT json_extract_string(ai_log, '$.consumer') AS consumer, COUNT(*) AS"
+                            + " cnt FROM {table} WHERE {timeFilter} AND"
+                            + " json_extract_string(ai_log, '$.safecheck_status') = 'deny' GROUP BY"
+                            + " consumer ORDER BY cnt DESC",
                         null,
                         null));
 
@@ -540,10 +579,11 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                 new SlsPresetSqlRegistry.Preset(
                         "request_distribution",
                         SlsPresetSqlRegistry.DisplayType.TABLE,
-                        "SELECT ai_mcp_tool_name AS tool_name, response_code, response_flags,"
-                                + " response_code_details, COUNT(*) AS cnt FROM {table} WHERE"
-                                + " {timeFilter} GROUP BY ai_mcp_tool_name, response_code,"
-                                + " response_flags, response_code_details ORDER BY cnt DESC",
+                        "SELECT json_extract_string(ai_log, '$.mcp_tool_name') AS tool_name,"
+                                + " response_code, response_flags, response_code_details, COUNT(*)"
+                                + " AS cnt FROM {table} WHERE {timeFilter} GROUP BY tool_name,"
+                                + " response_code, response_flags, response_code_details ORDER BY"
+                                + " cnt DESC",
                         null,
                         null));
 
@@ -555,8 +595,8 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                 new SlsPresetSqlRegistry.Preset(
                         "filter_service_options",
                         SlsPresetSqlRegistry.DisplayType.TABLE,
-                        "SELECT DISTINCT cluster_id AS service FROM {table} WHERE {timeFilter} AND"
-                                + " cluster_id IS NOT NULL LIMIT 100",
+                        "SELECT DISTINCT upstream_cluster AS service FROM {table} WHERE"
+                                + " {timeFilter} AND upstream_cluster IS NOT NULL LIMIT 100",
                         null,
                         null));
 
@@ -566,8 +606,9 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                 new SlsPresetSqlRegistry.Preset(
                         "filter_api_options",
                         SlsPresetSqlRegistry.DisplayType.TABLE,
-                        "SELECT DISTINCT ai_api AS api FROM {table} WHERE {timeFilter} AND ai_api"
-                                + " IS NOT NULL LIMIT 100",
+                        "SELECT DISTINCT json_extract_string(ai_log, '$.api') AS api FROM {table}"
+                                + " WHERE {timeFilter} AND json_extract_string(ai_log, '$.api') IS"
+                                + " NOT NULL LIMIT 100",
                         null,
                         null));
 
@@ -577,8 +618,9 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                 new SlsPresetSqlRegistry.Preset(
                         "filter_model_options",
                         SlsPresetSqlRegistry.DisplayType.TABLE,
-                        "SELECT DISTINCT ai_model AS model FROM {table} WHERE {timeFilter} AND"
-                                + " ai_model IS NOT NULL LIMIT 100",
+                        "SELECT DISTINCT json_extract_string(ai_log, '$.model') AS model FROM"
+                                + " {table} WHERE {timeFilter} AND"
+                                + " json_extract_string(ai_log, '$.model') IS NOT NULL LIMIT 100",
                         null,
                         null));
 
@@ -599,8 +641,9 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                 new SlsPresetSqlRegistry.Preset(
                         "filter_consumer_options",
                         SlsPresetSqlRegistry.DisplayType.TABLE,
-                        "SELECT DISTINCT consumer FROM {table} WHERE {timeFilter} AND consumer IS"
-                                + " NOT NULL LIMIT 100",
+                        "SELECT DISTINCT json_extract_string(ai_log, '$.consumer') AS consumer FROM"
+                                + " {table} WHERE {timeFilter} AND"
+                                + " json_extract_string(ai_log, '$.consumer') IS NOT NULL LIMIT 100",
                         null,
                         null));
 
@@ -621,8 +664,10 @@ public class DorisPresetSqlRegistry implements PresetSqlRegistry {
                 new SlsPresetSqlRegistry.Preset(
                         "filter_mcp_tool_options",
                         SlsPresetSqlRegistry.DisplayType.TABLE,
-                        "SELECT DISTINCT ai_mcp_tool_name AS mcp_tool_name FROM {table} WHERE"
-                                + " {timeFilter} AND ai_mcp_tool_name IS NOT NULL LIMIT 100",
+                        "SELECT DISTINCT json_extract_string(ai_log, '$.mcp_tool_name') AS"
+                                + " mcp_tool_name FROM {table} WHERE {timeFilter} AND"
+                                + " json_extract_string(ai_log, '$.mcp_tool_name') IS NOT NULL LIMIT"
+                                + " 100",
                         null,
                         null));
     }
