@@ -40,6 +40,7 @@ const ProductTypePage: React.FC<ProductTypePageProps> = ({ productType }) => {
   const [importModalVisible, setImportModalVisible] = useState(false);
 
   const showNacosImport = productType === 'AGENT_SKILL' || productType === 'WORKER';
+  const showBatchImport = productType !== 'AGENT_SKILL' && productType !== 'WORKER';
   const isMcpServer = productType === 'MCP_SERVER';
   const [mcpImportOpen, setMcpImportOpen] = useState(false);
 
@@ -145,12 +146,14 @@ const ProductTypePage: React.FC<ProductTypePageProps> = ({ productType }) => {
               从 Nacos 导入
             </Button>
           )}
-          <Button
-            onClick={() => setImportModalVisible(true)}
-            icon={<ImportOutlined />}
-          >
-            批量导入
-          </Button>
+          {showBatchImport && (
+            <Button
+              onClick={() => setImportModalVisible(true)}
+              icon={<ImportOutlined />}
+            >
+              批量导入
+            </Button>
+          )}
           {!isMcpServer && (
             <Button
               onClick={() => tableRef.current?.handleCreate()}

@@ -1546,7 +1546,27 @@ public class ProductServiceImpl implements ProductService {
                         ErrorCode.INVALID_REQUEST,
                         "Gateway ID is required when source type is GATEWAY");
             }
-            gatewayService.getGateway(param.getGatewayId());
+            GatewayResult gateway = gatewayService.getGateway(param.getGatewayId());
+
+            // Higress gateway only supports MCP_SERVER batch import
+            if (gateway.getGatewayType().isHigress()) {
+                if (param.getProductType() == ProductType.REST_API) {
+                    throw new BusinessException(
+                            ErrorCode.INVALID_REQUEST,
+                            "Higress gateway does not support REST API batch import");
+                }
+                if (param.getProductType() == ProductType.AGENT_API) {
+                    throw new BusinessException(
+                            ErrorCode.INVALID_REQUEST,
+                            "Higress gateway does not support Agent API batch import");
+                }
+                if (param.getProductType() == ProductType.MODEL_API) {
+                    throw new BusinessException(
+                            ErrorCode.INVALID_REQUEST,
+                            "Higress gateway does not support Model API batch import yet. Higress"
+                                + " AI routes do not contain real model IDs required by HiMarket");
+                }
+            }
 
         } else if (param.getSourceType().isNacos()) {
             if (StrUtil.isBlank(param.getNacosId())) {
@@ -1556,10 +1576,14 @@ public class ProductServiceImpl implements ProductService {
             }
             nacosService.getNacosInstance(param.getNacosId());
 
-            // Nacos does not support MODEL_API
+            // Nacos does not support MODEL_API or REST_API
             if (param.getProductType() == ProductType.MODEL_API) {
                 throw new BusinessException(
                         ErrorCode.INVALID_REQUEST, "Nacos source does not support MODEL_API type");
+            }
+            if (param.getProductType() == ProductType.REST_API) {
+                throw new BusinessException(
+                        ErrorCode.INVALID_REQUEST, "Nacos source does not support REST_API type");
             }
         }
     }

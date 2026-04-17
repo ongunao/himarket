@@ -9,7 +9,7 @@ interface ImportProductsModalProps {
   visible: boolean;
   onCancel: () => void;
   onSuccess: () => void;
-  productType: 'REST_API' | 'MCP_SERVER' | 'AGENT_SKILL' | 'WORKER' | 'AGENT_API' | 'MODEL_API';
+  productType: 'REST_API' | 'MCP_SERVER' | 'AGENT_API' | 'MODEL_API';
 }
 
 interface ServiceItem {
@@ -68,18 +68,31 @@ export default function ImportProductsModal({
   const pageSize = 500; // 每次从后端加载的服务数量上限
 
   // 判断当前产品类型支持的数据源
-  // REST_API, MODEL_API: 仅支持 Gateway
-  // MCP_SERVER, AGENT_API: 支持 Gateway 和 Nacos
-  // AGENT_SKILL, WORKER: 不支持此界面导入
+  // Higress 网关仅支持 MCP_SERVER 批量导入
+  // REST_API, MODEL_API: 仅支持 AI 网关
+  // MCP_SERVER, AGENT_API: 支持 AI 网关和 Nacos
   const supportsNacos =
     productType === 'MCP_SERVER' ||
     productType === 'AGENT_API';
 
-  const supportsGateway =
+  const supportsHigress = productType === 'MCP_SERVER';
+
+  const supportsAIGateway =
     productType === 'REST_API' ||
     productType === 'MODEL_API' ||
     productType === 'MCP_SERVER' ||
     productType === 'AGENT_API';
+
+  // Higress 不支持时的提示文案
+  const higressDisabledReason = !supportsHigress
+    ? `Higress 网关暂不支持 ${PRODUCT_TYPE_LABELS[productType]} 批量导入`
+    : '';
+
+  // Nacos 不支持时的提示文案
+  const nacosDisabledReason =
+    productType === 'REST_API' || productType === 'MODEL_API'
+      ? `Nacos 不支持 ${PRODUCT_TYPE_LABELS[productType]} 导入`
+      : '';
 
   // 过滤服务列表
   const filteredServices = services.filter(service => {
@@ -113,7 +126,7 @@ export default function ImportProductsModal({
   const resetForm = () => {
     form.resetFields();
     // 根据产品类型设置默认数据源
-    const defaultSourceType = supportsGateway ? 'HIGRESS' : 'NACOS';
+    const defaultSourceType = supportsHigress ? 'HIGRESS' : supportsAIGateway ? 'AI_GATEWAY' : 'NACOS';
     setSourceType(defaultSourceType);
     setServices([]);
     setSelectedServiceKeys([]);
@@ -254,16 +267,7 @@ export default function ImportProductsModal({
         }
       } else {
         // Nacos 数据源
-        if (productType === 'REST_API') {
-          message.warning('REST API 仅支持从网关实例导入，不支持从 Nacos 导入');
-          setServices([]);
-        } else if (productType === 'MODEL_API') {
-          message.warning('Model API 仅支持从网关实例导入，不支持从 Nacos 导入');
-          setServices([]);
-        } else if (productType === 'AGENT_SKILL' || productType === 'WORKER') {
-          message.warning('Agent Skill 和 Worker 暂不支持通过此界面从 Nacos 导入');
-          setServices([]);
-        } else if (productType === 'MCP_SERVER') {
+        if (productType === 'MCP_SERVER') {
           res = await nacosApi.getNacosMcpServers(values.nacosId, {
             namespaceId: values.namespaceId,
             page: 0,
@@ -318,7 +322,7 @@ export default function ImportProductsModal({
       fetchGateways();
       fetchNacosInstances();
       // 根据产品类型设置默认数据源类型
-      const defaultSourceType = supportsGateway ? 'HIGRESS' : 'NACOS';
+      const defaultSourceType = supportsHigress ? 'HIGRESS' : supportsAIGateway ? 'AI_GATEWAY' : 'NACOS';
       setSourceType(defaultSourceType);
       form.setFieldValue('sourceType', defaultSourceType);
     }
@@ -472,15 +476,17 @@ export default function ImportProductsModal({
             placeholder="请选择数据源类型"
             onChange={handleSourceTypeChange}
           >
-            {supportsGateway && (
-              <>
-                <Select.Option value="HIGRESS">{SOURCE_TYPE_LABELS.HIGRESS}</Select.Option>
-                <Select.Option value="AI_GATEWAY">{SOURCE_TYPE_LABELS.AI_GATEWAY}</Select.Option>
-              </>
+            <Select.Option value="HIGRESS" disabled={!supportsHigress}>
+              {SOURCE_TYPE_LABELS.HIGRESS}
+              {higressDisabledReason && <span className="text-gray-400 text-xs ml-1">（{higressDisabledReason}）</span>}
+            </Select.Option>
+            {supportsAIGateway && (
+              <Select.Option value="AI_GATEWAY">{SOURCE_TYPE_LABELS.AI_GATEWAY}</Select.Option>
             )}
-            {supportsNacos && (
-              <Select.Option value="NACOS">{SOURCE_TYPE_LABELS.NACOS}</Select.Option>
-            )}
+            <Select.Option value="NACOS" disabled={!!nacosDisabledReason}>
+              {SOURCE_TYPE_LABELS.NACOS}
+              {nacosDisabledReason && <span className="text-gray-400 text-xs ml-1">（{nacosDisabledReason}）</span>}
+            </Select.Option>
           </Select>
         </Form.Item>
 
