@@ -10,6 +10,54 @@ interface McpToolCallItemProps {
   toolResponse?: IMcpToolResponse;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parseJsonValue(value: unknown, fallback: unknown) {
+  if (typeof value !== 'string') {
+    return value ?? fallback;
+  }
+  try {
+    return JSON.parse(value || '{}');
+  } catch {
+    return value;
+  }
+}
+
+function extractImageSources(value: unknown) {
+  const sources: string[] = [];
+
+  const collect = (node: unknown) => {
+    if (Array.isArray(node)) {
+      node.forEach(collect);
+      return;
+    }
+    if (!isRecord(node)) {
+      return;
+    }
+
+    if (node.type === 'image' && isRecord(node.source)) {
+      const { data, mediaType, url } = node.source;
+      if (typeof url === 'string' && url) {
+        sources.push(url);
+      }
+      if (typeof data === 'string' && data) {
+        sources.push(
+          data.startsWith('data:')
+            ? data
+            : `data:${typeof mediaType === 'string' ? mediaType : 'image/png'};base64,${data}`,
+        );
+      }
+    }
+
+    Object.values(node).forEach(collect);
+  };
+
+  collect(value);
+  return [...new Set(sources)];
+}
+
 // 单个工具调用组件 - 用于内联展示
 export function McpToolCallItem({ toolCall, toolResponse }: McpToolCallItemProps) {
   const { t } = useTranslation('chat');
@@ -19,22 +67,9 @@ export function McpToolCallItem({ toolCall, toolResponse }: McpToolCallItemProps
   const toolName = toolCall.name;
   const isExecuting = !toolResponse;
 
-  let parsedInput: unknown = null;
-  let parsedResponse: unknown = null;
-  try {
-    parsedInput = JSON.parse(toolCall.arguments || '{}');
-  } catch {
-    parsedInput = toolCall.arguments;
-  }
-  try {
-    const resultString =
-      typeof toolResponse?.result === 'string'
-        ? toolResponse.result
-        : JSON.stringify(toolResponse?.result || '{}');
-    parsedResponse = JSON.parse(resultString || '{}');
-  } catch {
-    parsedResponse = toolResponse?.result;
-  }
+  const parsedInput = parseJsonValue(toolCall.arguments, {});
+  const parsedResponse = parseJsonValue(toolResponse?.result, {});
+  const imageSources = extractImageSources(parsedResponse);
 
   return (
     <div className="overflow-hidden rounded-[14px] border border-[#DDE5F0] bg-[#F8FAFE] transition-all duration-200 hover:border-[#CCD8EA]">
@@ -102,11 +137,24 @@ export function McpToolCallItem({ toolCall, toolResponse }: McpToolCallItemProps
                   {t('toolCall.results')}
                 </div>
                 <div className="overflow-x-auto rounded-lg border border-gray-100 bg-white p-3">
-                  <pre className="whitespace-pre-wrap font-mono text-xs text-gray-700">
-                    {typeof parsedResponse === 'object'
-                      ? JSON.stringify(parsedResponse, null, 2)
-                      : String(parsedResponse)}
-                  </pre>
+                  {imageSources.length > 0 ? (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {imageSources.map((src, index) => (
+                        <img
+                          alt={`${toolName} result ${index + 1}`}
+                          className="max-h-[360px] w-full rounded-lg border border-gray-100 object-contain"
+                          key={src}
+                          src={src}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <pre className="whitespace-pre-wrap font-mono text-xs text-gray-700">
+                      {typeof parsedResponse === 'object'
+                        ? JSON.stringify(parsedResponse, null, 2)
+                        : String(parsedResponse)}
+                    </pre>
+                  )}
                 </div>
               </div>
             )}

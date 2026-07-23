@@ -14,8 +14,9 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import './Sidebar.css';
-import APIs, { type ISession } from '../../lib/apis';
-import { FileVideo, Image, MessageSquareQuote } from '../icon';
+import APIs, { type ISession, type ModelCategory } from '../../lib/apis';
+import { portalConfirmProps } from '../../lib/styles';
+import { AudioLines, FileVideo, Image, MessageSquareQuote } from '../icon';
 
 import type { MenuProps } from 'antd';
 
@@ -24,8 +25,8 @@ interface SidebarProps {
   onNewChat: () => void;
   onSelectSession?: (sessionId: string, productIds: string[]) => void;
   refreshTrigger?: number; // 添加刷新触发器
-  selectedType?: 'TEXT' | 'Image';
-  onSelectType?: (type: 'TEXT' | 'Image') => void;
+  selectedType?: ModelCategory;
+  onSelectType?: (type: ModelCategory) => void;
 }
 
 interface ChatSession {
@@ -206,8 +207,10 @@ export function Sidebar({
   // 删除会话
   const handleDeleteSession = (sessionId: string, sessionName: string) => {
     Modal.confirm({
+      ...portalConfirmProps,
       cancelText: t('sidebar.cancel'),
       content: t('sidebar.deleteConfirm', { name: sessionName }),
+      icon: <DeleteOutlined className="portal-confirm-danger-icon" />,
       okText: t('sidebar.delete'),
       okType: 'danger',
       onOk: async () => {
@@ -267,9 +270,9 @@ export function Sidebar({
     if (sessions.length === 0) return null;
 
     return (
-      <div className="mb-2">
+      <div className="mb-1">
         <button
-          className={`${expandedSections[sectionKey] ? 'bg-white' : ''} sticky top-0 z-10 flex items-center justify-between px-3 py-2 text-sm text-subTitle cursor-pointer hover:bg-white/30 rounded-lg transition-all duration-200 hover:scale-[1.02] backdrop-blur-xl border-0 w-full text-left`}
+          className="sticky top-0 z-10 flex w-full cursor-pointer items-center justify-between rounded-[8px] border-0 bg-[#F1F3F7] px-3 py-1.5 text-left text-xs font-medium text-[#737B89] transition-colors duration-200 hover:bg-[#E9EDF3]"
           onClick={() => toggleSection(sectionKey)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
@@ -279,7 +282,7 @@ export function Sidebar({
           }}
           type="button"
         >
-          <span className="font-medium">{title}</span>
+          <span>{title}</span>
           <span
             className={`
               transition-transform duration-300 ease-in-out
@@ -295,17 +298,16 @@ export function Sidebar({
             ${expandedSections[sectionKey] ? 'opacity-100 mt-1' : 'max-h-0 opacity-0'}
           `}
         >
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {sessions.map((session, index) => (
               <div
                 className={`
-                  px-3 py-2 rounded-lg text-sm
-                  transition-all duration-200 ease-in-out
-                  hover:scale-[1.02] hover:shadow-sm text-mainTitle
+                  min-h-9 rounded-[8px] px-3 py-2 text-sm text-mainTitle
+                  transition-colors duration-200 ease-in-out
                   ${
                     currentSessionId === session.id
-                      ? 'bg-colorPrimaryHoverLight font-medium'
-                      : 'text-gray-600 hover:bg-colorPrimaryHoverLight hover:text-gray-900'
+                      ? 'bg-colorPrimarySoft font-medium text-gray-900'
+                      : 'text-gray-600 hover:bg-colorPrimarySoftHover hover:text-gray-900'
                   }
                 `}
                 key={session.id}
@@ -409,8 +411,8 @@ export function Sidebar({
   return (
     <div
       className={`
-        flex min-h-0 flex-col rounded-[16px] border border-white/70 bg-white/75
-        shadow-[0_18px_50px_rgba(37,56,88,0.08)] backdrop-blur-xl
+        flex min-h-0 flex-col rounded-[16px] bg-[#F1F3F7]
+        shadow-[0_10px_28px_rgba(55,68,94,0.05)]
         transition-all duration-300 ease-in-out chat-session--sidebar
         ${isCollapsed ? 'w-[72px]' : 'w-[260px]'}
       `}
@@ -419,13 +421,14 @@ export function Sidebar({
       <div className="p-4">
         <button
           className={`
-            flex items-center rounded-[12px] border border-[#DDE5F0] bg-white/90
+            group flex items-center rounded-[10px] border border-transparent bg-[#F5F6FA]
             transition-all duration-200 ease-in-out
-            hover:border-colorPrimary/40 hover:shadow-sm active:scale-[0.98] text-nowrap overflow-hidden
-            ${isCollapsed ? 'h-10 w-10 justify-center p-0' : 'w-full justify-between px-3 py-2.5'}
+            overflow-hidden text-nowrap hover:bg-[#F0F2F7] active:scale-[0.98]
+            ${isCollapsed ? 'h-10 w-10 justify-center p-0' : 'h-10 w-full justify-between px-3'}
           `}
           onClick={onNewChat}
           title={isCollapsed ? t('sidebar.newChat') : ''}
+          type="button"
         >
           {isCollapsed ? (
             <PlusOutlined className="transition-transform duration-200 hover:rotate-90" />
@@ -433,91 +436,116 @@ export function Sidebar({
             <>
               <div className="flex items-center gap-2">
                 <PlusOutlined className="transition-transform duration-200 text-sm" />
-                <span className="text-sm font-medium">{t('sidebar.newChat')}</span>
+                <span className="text-sm font-semibold text-[#4F5A6A]">{t('sidebar.newChat')}</span>
               </div>
-              <div className="flex items-center gap-1 text-xs text-gray-400">
-                <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-sans">
-                  {isMac ? '⇧' : 'Shift'}
-                </kbd>
-                <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-sans">
-                  {isMac ? '⌘' : 'Ctrl'}
-                </kbd>
-                <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-sans">O</kbd>
-              </div>
+              <kbd className="font-sans text-[13px] leading-none text-[#8D96A5] opacity-70 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+                {isMac ? '⇧⌘O' : 'Shift Ctrl O'}
+              </kbd>
             </>
           )}
         </button>
       </div>
 
       {/* 功能列表 */}
-      <div className="px-4 mb-4 flex flex-col gap-2">
-        <button
-          className={`
-            px-3 py-2 rounded-lg text-sm cursor-pointer
-            transition-all duration-200 ease-in-out overflow-hidden text-nowrap
-            border-0 w-full text-left hover:bg-white/80
-            ${selectedType === 'TEXT' ? 'bg-colorPrimaryHoverLight text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-100'}
-            ${isCollapsed ? 'px-2 py-2 text-center' : 'px-3 py-2 text-sm'}
-          `}
-          onClick={() => onSelectType?.('TEXT')}
-          title={isCollapsed ? t('sidebar.languageModel') : ''}
-          type="button"
-        >
-          {isCollapsed ? (
-            <MessageSquareQuote className="fill-mainTitle text-base transition-transform duration-200 hover:scale-110" />
-          ) : (
-            <div className="flex items-center gap-2">
-              <MessageSquareQuote className="fill-mainTitle text-base transition-transform duration-200 hover:scale-110" />
-              {t('sidebar.languageModel')}
-            </div>
-          )}
-        </button>
-        <button
-          className={`
-            px-3 py-2 rounded-lg text-sm overflow-hidden text-nowrap cursor-pointer
-            transition-all duration-200 ease-in-out
-            border-0 w-full text-left hover:bg-white/80
-            ${selectedType === 'Image' ? 'bg-colorPrimaryHoverLight text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-100'}
-            ${isCollapsed ? 'px-2 py-2 text-center' : 'px-3 py-2 text-sm'}
-          `}
-          onClick={() => onSelectType?.('Image')}
-          title={isCollapsed ? t('sidebar.textToImage') : ''}
-        >
-          {isCollapsed ? (
-            <Image className="fill-mainTitle text-base transition-transform duration-200 hover:scale-110" />
-          ) : (
-            <div className="flex items-center gap-2 justify-between">
-              <div className="flex items-center gap-2">
-                <Image className="fill-mainTitle text-base transition-transform duration-200 hover:scale-110" />
-                {t('sidebar.textToImage')}
-              </div>
-            </div>
-          )}
-        </button>
+      <div className="mx-4 mb-4">
         <div
-          className={`
-            px-3 py-2 rounded-lg text-sm overflow-hidden text-nowrap
-            transition-all duration-200 ease-in-out
-            text-gray-900 hover:bg-white/80
-            ${isCollapsed ? 'px-2 py-2 text-center' : 'px-3 py-2 text-sm'}
-          `}
-          title={isCollapsed ? t('sidebar.textToVideo') : ''}
+          className={`flex flex-col gap-1 rounded-[12px] bg-[#F5F6FA] ${isCollapsed ? 'p-1' : 'p-1.5'}`}
         >
-          {isCollapsed ? (
-            <FileVideo className="fill-mainTitle text-base transition-transform duration-200 hover:scale-110" />
-          ) : (
-            <div className="flex items-center gap-2 justify-between">
+          <button
+            className={`
+              min-h-9 w-full cursor-pointer overflow-hidden text-nowrap rounded-[8px] border-0 text-left text-[13px] font-semibold text-[#5C6777]
+              transition-colors duration-200 ease-in-out
+              ${selectedType === 'TEXT' ? 'bg-colorPrimarySoft' : 'hover:bg-colorPrimarySoftHover'}
+              ${isCollapsed ? 'px-2 py-2 text-center' : 'px-3 py-2'}
+            `}
+            onClick={() => onSelectType?.('TEXT')}
+            title={isCollapsed ? t('sidebar.languageModel') : ''}
+            type="button"
+          >
+            {isCollapsed ? (
+              <MessageSquareQuote
+                className={`text-base transition-transform duration-200 hover:scale-110 ${selectedType === 'TEXT' ? 'fill-colorPrimary' : 'fill-mainTitle'}`}
+              />
+            ) : (
               <div className="flex items-center gap-2">
-                <FileVideo className="fill-mainTitle text-base transition-transform duration-200 hover:scale-110" />
-                {t('sidebar.textToVideo')}
+                <MessageSquareQuote
+                  className={`text-base transition-transform duration-200 hover:scale-110 ${selectedType === 'TEXT' ? 'fill-colorPrimary' : 'fill-mainTitle'}`}
+                />
+                {t('sidebar.languageModel')}
               </div>
-              <div className="py-1 px-2 rounded-[10px] bg-[#F3F4F6] text-[#99A1AF]">
-                {t('sidebar.comingSoon')}
+            )}
+          </button>
+          <button
+            className={`
+              min-h-9 w-full cursor-pointer overflow-hidden text-nowrap rounded-[8px] border-0 text-left text-[13px] font-semibold text-[#5C6777]
+              transition-colors duration-200 ease-in-out
+              ${selectedType === 'Image' ? 'bg-colorPrimarySoft' : 'hover:bg-colorPrimarySoftHover'}
+              ${isCollapsed ? 'px-2 py-2 text-center' : 'px-3 py-2'}
+            `}
+            onClick={() => onSelectType?.('Image')}
+            title={isCollapsed ? t('sidebar.textToImage') : ''}
+          >
+            {isCollapsed ? (
+              <Image
+                className={`text-base transition-transform duration-200 hover:scale-110 ${selectedType === 'Image' ? 'fill-colorPrimary' : 'fill-mainTitle'}`}
+              />
+            ) : (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Image
+                    className={`text-base transition-transform duration-200 hover:scale-110 ${selectedType === 'Image' ? 'fill-colorPrimary' : 'fill-mainTitle'}`}
+                  />
+                  {t('sidebar.textToImage')}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </button>
+          <div
+            className={`
+              min-h-9 w-full overflow-hidden text-nowrap rounded-[8px] text-[13px] font-semibold text-[#5C6777]
+              transition-colors duration-200 ease-in-out hover:bg-[#EFF1F5]
+              ${isCollapsed ? 'px-2 py-2 text-center' : 'px-3 py-2'}
+            `}
+            title={isCollapsed ? t('sidebar.textToVideo') : ''}
+          >
+            {isCollapsed ? (
+              <FileVideo className="fill-mainTitle text-base transition-transform duration-200 hover:scale-110" />
+            ) : (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <FileVideo className="fill-mainTitle text-base transition-transform duration-200 hover:scale-110" />
+                  {t('sidebar.textToVideo')}
+                </div>
+                <div className="rounded-[6px] bg-[#ECEEF3] px-1.5 py-0.5 text-[11px] font-normal leading-4 text-[#9098A5]">
+                  {t('sidebar.comingSoon')}
+                </div>
+              </div>
+            )}
+          </div>
+          <div
+            className={`
+              min-h-9 w-full overflow-hidden text-nowrap rounded-[8px] text-[13px] font-semibold text-[#5C6777]
+              transition-colors duration-200 ease-in-out hover:bg-[#EFF1F5]
+              ${isCollapsed ? 'px-2 py-2 text-center' : 'px-3 py-2'}
+            `}
+            title={isCollapsed ? t('sidebar.voiceGeneration') : ''}
+          >
+            {isCollapsed ? (
+              <AudioLines className="h-4 w-4 opacity-75" />
+            ) : (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <AudioLines className="h-4 w-4 opacity-75" />
+                  {t('sidebar.voiceGeneration')}
+                </div>
+                <div className="rounded-[6px] bg-[#ECEEF3] px-1.5 py-0.5 text-[11px] font-normal leading-4 text-[#9098A5]">
+                  {t('sidebar.comingSoon')}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-        {!isCollapsed && <div className="h-[1px] bg-[#e5e5e5] my-2"></div>}
+        {!isCollapsed && <div className="my-2 h-px bg-[#D9DFE8]"></div>}
       </div>
 
       {/* 历史会话列表 */}
@@ -550,16 +578,17 @@ export function Sidebar({
       )}
 
       {/* 收起/展开按钮 */}
-      <div className="p-4">
+      <div className="px-4 pb-4 pt-2">
         <button
           className={`
             flex items-center gap-2 text-gray-600 rounded-lg
             transition-all duration-200 ease-in-out overflow-hidden text-nowrap
-            hover:bg-white/80 active:scale-[0.98]
-            ${isCollapsed ? 'mx-auto h-10 w-10 justify-center p-0' : 'w-full justify-center px-4 py-2'}
+            hover:bg-[#E3E8EF] active:scale-[0.98]
+            ${isCollapsed ? 'mx-auto h-10 w-10 justify-center p-0' : 'w-full justify-start px-3 py-2'}
           `}
           onClick={() => setIsCollapsed(!isCollapsed)}
           title={isCollapsed ? t('sidebar.expand') : t('sidebar.collapse')}
+          type="button"
         >
           {isCollapsed ? (
             <MenuUnfoldOutlined className="transition-transform duration-200 hover:translate-x-1" />

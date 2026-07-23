@@ -7,6 +7,12 @@ import i18n from '../i18n';
 
 import type { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    suppressErrorMessage?: boolean;
+  }
+}
+
 export interface RespI<T> {
   code: string;
   message?: string;
@@ -68,6 +74,7 @@ request.interceptors.response.use(
   },
   (error) => {
     const status = error.response?.status;
+    const suppressErrorMessage = error.config?.suppressErrorMessage;
 
     switch (status) {
       case 401:
@@ -104,13 +111,19 @@ request.interceptors.response.use(
         }
         break;
       case 404:
-        message.error(i18n.t('error.notFound'));
+        if (!suppressErrorMessage) {
+          message.error(i18n.t('error.notFound'));
+        }
         break;
       case 500:
-        message.error(i18n.t('error.serverError'));
+        if (!suppressErrorMessage) {
+          message.error(i18n.t('error.serverError'));
+        }
         break;
       default:
-        message.error(error.response?.data?.message || i18n.t('error.requestFailed'));
+        if (!suppressErrorMessage) {
+          message.error(error.response?.data?.message || i18n.t('error.requestFailed'));
+        }
     }
     return Promise.reject(error);
   },

@@ -3,8 +3,6 @@
     "selectModelFirst": "请先选择一个模型"
   },
   "area": {
-    "multiModelCompare": "多模型对比",
-    "addCompareModel": "添加对比模型",
     "welcomePrefix": "您好，欢迎来到",
     "emptyTitle": "欢迎使用"
   },
@@ -20,8 +18,11 @@
     "uploadFailed": "上传失败",
     "uploadError": "上传出错",
     "dropArea": "拖放附件到此区域",
+    "imageEditPlaceholder": "描述你想如何修改这张图片...",
+    "cancelImageEdit": "取消图片编辑",
     "mcpExecuting": "MCP 工具执行中...",
     "placeholder": "输入您的问题...",
+    "thinking": "思考",
     "webSearch": "联网"
   },
   "mcp": {
@@ -38,12 +39,13 @@
     "noDescription": "暂无描述",
     "add": "添加",
     "remove": "取消添加",
+    "subscribe": "订阅",
     "quickSubscribe": "快速订阅"
   },
   "mcpModal": {
-    "title": "选择 MCP Server",
+    "title": "选择 MCP 服务",
     "description": "选择需要加入本次对话的 MCP Server，可按分类筛选或搜索名称。",
-    "enabled": "MCP: 启用",
+    "enabled": "启用",
     "scope": "分类",
     "availableServers": "可用 Server",
     "addedServers": "已添加 Server",
@@ -51,9 +53,9 @@
     "addedCount": "已添加 {{count}} / 10",
     "serverCount": "{{count}} 个 Server",
     "removeAll": "批量取消添加",
-    "noServers": "暂无 MCP Server...",
-    "addedEmptyHint": "您可以从全部 MCP Server 中选择并添加您需要的 Server",
-    "viewAll": "预览全部 Server"
+    "noServers": "暂无符合条件的 MCP 服务",
+    "noAddedServers": "暂未添加 MCP 服务",
+    "viewAll": "查看全部"
   },
   "toolCall": {
     "executing": "工具执行中...",
@@ -69,6 +71,7 @@
     "totalTime": "总耗时",
     "inputTokens": "输入 Token",
     "outputTokens": "输出 Token",
+    "thinking": "思考过程",
     "copy": "复制",
     "regenerate": "重新生成",
     "previousVersion": "上一个版本",
@@ -80,28 +83,14 @@
     "loadHistoryFailed": "加载聊天记录失败"
   },
   "modelSelector": {
+    "title": "选择模型",
+    "previousCategories": "查看前面的分类",
+    "nextCategories": "查看更多分类",
     "searchPlaceholder": "搜索模型...",
     "loadingCategories": "加载分类中...",
     "loading": "加载中...",
     "noModels": "暂无模型",
-    "noModelsHint": "您需要首先在 Admin 中配置模型，才能在 HiChat 中体验",
     "selectModel": "选择模型"
-  },
-  "multiModel": {
-    "cancel": "取消",
-    "startCompare": "开始对比",
-    "title": "选择对比模型",
-    "baseModels": "当前对比",
-    "selectedModels": "已选模型",
-    "currentModel": "当前模型",
-    "selectOne": "再选择 1 个模型（已选 {{current}}/1）",
-    "selectMore": "再选择 1-{{max}} 个模型（已选 {{current}}/{{max}}）",
-    "selectMoreDefault": "再选择 1-2 个模型（已选 {{current}}/2）",
-    "selectedCount": "已选 {{current}} / {{max}}",
-    "loadingModels": "加载模型列表...",
-    "current": "当前",
-    "noDescription": "暂无描述",
-    "noAvailableModels": "暂无可选模型"
   },
   "suggestions": {
     "title": "推荐问题",
@@ -137,6 +126,7 @@
     "languageModel": "语言模型",
     "textToImage": "文生图",
     "textToVideo": "文生视频",
+    "voiceGeneration": "语音生成",
     "comingSoon": "敬请期待",
     "noHistory": "暂无历史会话",
     "today": "今天",

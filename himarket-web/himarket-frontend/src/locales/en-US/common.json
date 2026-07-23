@@ -11,8 +11,20 @@
   "loading": "Loading...",
   "markdown": {
     "generatedImage": "Generated image",
+    "generatedVideo": "Generated video",
     "download": "Download",
+    "editImage": "Continue editing",
+    "openOriginal": "Open original",
     "viewOriginal": "View original"
+  },
+  "attachment": {
+    "loading": "Loading attachment...",
+    "imageExpired": "Image expired",
+    "fileExpired": "Attachment expired",
+    "imageLoadFailed": "Image failed to load",
+    "fileLoadFailed": "Attachment failed to load",
+    "loadFailedHint": "Please try again later",
+    "retry": "Retry"
   },
   "status": {
     "product": {

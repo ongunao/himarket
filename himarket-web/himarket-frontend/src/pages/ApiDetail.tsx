@@ -175,10 +175,17 @@ function ApiDetailPage() {
 
   const leftContent = apiData ? (
     <ProductDetailTabs
+      appearance="api"
       defaultActiveKey="overview"
       items={[
         {
-          children: <ProductOverview content={apiData.document} emptyText={t('overview.empty')} />,
+          children: (
+            <ProductOverview
+              appearance="market"
+              content={apiData.document}
+              emptyText={t('overview.empty')}
+            />
+          ),
           key: 'overview',
           label: (
             <ProductDetailTabLabel icon={<FileTextOutlined />}>
@@ -363,7 +370,7 @@ function ApiDetailPage() {
   );
 
   const rightContent = (
-    <section className="rounded-[14px] border border-[#DDE5F0] bg-white/90 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.05)] backdrop-blur-sm">
+    <section className="rounded-[12px] border border-[#E0E5ED] bg-white/70 p-4 backdrop-blur-xl">
       <div className="mb-3 flex rounded-lg bg-gray-100 p-1">
         <button
           className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-xs transition-all ${
@@ -396,6 +403,7 @@ function ApiDetailPage() {
 
   return (
     <ProductDetailLayout
+      appearance="api"
       error={error || undefined}
       headerProps={
         apiData

@@ -1,6 +1,10 @@
 {
   "loading": "Loading...",
   "updatedAt": "Updated {{date}}",
+  "description": {
+    "expand": "Show more",
+    "collapse": "Show less"
+  },
   "message": {
     "subscriptionDetailsFailed": "Failed to load subscription details. Please try again.",
     "selectConsumer": "Please select a consumer",

@@ -101,7 +101,132 @@
   }
 }
 
+@keyframes hiChatBrandGlow {
+  0%,
+  100% {
+    opacity: 0.84;
+    text-shadow: 0 2px 8px rgba(129, 140, 248, 0.1);
+    transform: scale(0.99);
+  }
+  50% {
+    opacity: 1;
+    text-shadow:
+      0 4px 20px rgba(129, 140, 248, 0.38),
+      0 0 8px rgba(129, 140, 248, 0.22);
+    transform: scale(1.01);
+  }
+}
+
+@keyframes chatCanvasLavender {
+  0% {
+    opacity: 0.6;
+    transform: translate3d(-3%, -1%, 0) rotate(-10deg) scale(1.04);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translate3d(4%, 2%, 0) rotate(-10deg) scale(1.04);
+  }
+  100% {
+    opacity: 0.66;
+    transform: translate3d(0, 4%, 0) rotate(-10deg) scale(1.04);
+  }
+}
+
+@keyframes chatCanvasBlue {
+  0% {
+    opacity: 0.54;
+    transform: translate3d(3%, -2%, 0) rotate(10deg) scale(1.04);
+  }
+  50% {
+    opacity: 0.72;
+    transform: translate3d(-4%, 3%, 0) rotate(10deg) scale(1.04);
+  }
+  100% {
+    opacity: 0.58;
+    transform: translate3d(-1%, -1%, 0) rotate(10deg) scale(1.04);
+  }
+}
+
+@keyframes marketCanvasLavender {
+  0% {
+    opacity: 0.68;
+    transform: translate3d(-7%, -3%, 0) rotate(-14deg) scale(1.02);
+  }
+  50% {
+    opacity: 0.94;
+    transform: translate3d(9%, 3%, 0) rotate(-8deg) scale(1.09);
+  }
+  100% {
+    opacity: 0.74;
+    transform: translate3d(-1%, 8%, 0) rotate(-16deg) scale(1.04);
+  }
+}
+
+@keyframes marketCanvasBlue {
+  0% {
+    opacity: 0.58;
+    transform: translate3d(8%, -5%, 0) rotate(14deg) scale(1.03);
+  }
+  50% {
+    opacity: 0.88;
+    transform: translate3d(-9%, 5%, 0) rotate(8deg) scale(1.1);
+  }
+  100% {
+    opacity: 0.66;
+    transform: translate3d(2%, -4%, 0) rotate(17deg) scale(1.05);
+  }
+}
+
 @layer utilities {
+  .chat-canvas-lavender {
+    opacity: 0.68;
+    transform: rotate(-10deg) scale(1.04);
+    transform-origin: center;
+  }
+  .chat-canvas-blue {
+    opacity: 0.6;
+    transform: rotate(10deg) scale(1.04);
+    transform-origin: center;
+  }
+  .market-canvas-lavender {
+    opacity: 0.8;
+    transform: rotate(-12deg) scale(1.04);
+    transform-origin: center;
+  }
+  .market-canvas-blue {
+    opacity: 0.7;
+    transform: rotate(12deg) scale(1.04);
+    transform-origin: center;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .chat-canvas-lavender {
+      animation: chatCanvasLavender 46s cubic-bezier(0.45, 0, 0.2, 1) infinite alternate;
+      will-change: opacity, transform;
+    }
+    .chat-canvas-blue {
+      animation: chatCanvasBlue 54s cubic-bezier(0.45, 0, 0.2, 1) infinite alternate-reverse;
+      will-change: opacity, transform;
+    }
+    .market-canvas-lavender {
+      animation: marketCanvasLavender 26s cubic-bezier(0.45, 0, 0.2, 1) infinite alternate;
+      will-change: opacity, transform;
+    }
+    .market-canvas-blue {
+      animation: marketCanvasBlue 32s cubic-bezier(0.45, 0, 0.2, 1) infinite alternate-reverse;
+      will-change: opacity, transform;
+    }
+  }
+  .hi-chat-brand-glow {
+    display: inline-block;
+    text-shadow: 0 3px 14px rgba(129, 140, 248, 0.18);
+    transform-origin: center;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .hi-chat-brand-glow {
+      animation: hiChatBrandGlow 2.6s ease-in-out infinite;
+      will-change: opacity, text-shadow, transform;
+    }
+  }
   .scrollbar-none {
     -ms-overflow-style: none;
     scrollbar-width: none;

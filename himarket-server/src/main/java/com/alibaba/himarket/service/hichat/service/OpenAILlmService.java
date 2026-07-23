@@ -8,14 +8,13 @@ import com.alibaba.himarket.service.hichat.support.InvokeModelParam;
 import com.alibaba.himarket.service.hichat.support.LlmChatRequest;
 import com.alibaba.himarket.support.enums.AIProtocol;
 import com.alibaba.himarket.support.product.ModelFeature;
-import com.alibaba.himarket.utils.JsonUtil;
-import com.fasterxml.jackson.core.type.TypeReference;
-import io.agentscope.core.formatter.openai.OpenAIChatFormatter;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.model.Model;
-import io.agentscope.core.model.OpenAIChatModel;
+import io.agentscope.extensions.model.openai.OpenAIChatModel;
+import io.agentscope.extensions.model.openai.formatter.OpenAIChatFormatter;
 import java.net.URI;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -46,18 +45,15 @@ public class OpenAILlmService extends AbstractLlmService {
                                         pathValue, pathType, aiProtocols));
         request.setUri(uri);
 
-        if (Boolean.TRUE.equals(param.getEnableWebSearch())) {
-            Map<String, Object> webSearchOptions =
-                    JsonUtil.parse(
-                            """
-                                {
-                                    "web_search_options": {
-                                        "search_context_size": "medium"
-                                    }
-                                }
-                            """,
-                            new TypeReference<Map<String, Object>>() {});
-            request.setBodyParams(webSearchOptions);
+        Map<String, Object> bodyParams = new LinkedHashMap<>();
+        if (param.isEnableWebSearch()) {
+            bodyParams.put("web_search_options", Map.of("search_context_size", "medium"));
+        }
+        if (Boolean.TRUE.equals(getOrDefaultModelFeature(product).getEnableThinking())) {
+            bodyParams.put("enable_thinking", request.isEnableThinking());
+        }
+        if (!bodyParams.isEmpty()) {
+            request.setBodyParams(bodyParams);
         }
 
         return request;
@@ -97,5 +93,10 @@ public class OpenAILlmService extends AbstractLlmService {
     @Override
     public List<AIProtocol> getProtocols() {
         return Collections.singletonList(AIProtocol.OPENAI);
+    }
+
+    @Override
+    public String getModelCategory() {
+        return "TEXT";
     }
 }

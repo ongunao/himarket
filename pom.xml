@@ -66,7 +66,8 @@
         <aliyun-tea-util.version>0.2.23</aliyun-tea-util.version>
         <aliyun-tea-xml.version>0.1.6</aliyun-tea-xml.version>
         <aliyun-openapiutil.version>0.2.2</aliyun-openapiutil.version>
-        <okhttp.version>4.12.0</okhttp.version>
+        <okhttp.version>5.3.2</okhttp.version>
+        <okio.version>3.16.4</okio.version>
         <flyway.version>10.15.0</flyway.version>
         <higressadminsdk.version>0.0.2</higressadminsdk.version>
         <nacos.client.version>3.2.1-2026.03.30</nacos.client.version>
@@ -74,11 +75,11 @@
         <caffeine.version>3.2.3</caffeine.version>
         <snakeyaml.version>2.0</snakeyaml.version>
         <fabric8.version>6.1.1</fabric8.version>
-        <agentscope.version>1.0.10</agentscope.version>
+        <agentscope.version>2.0.0</agentscope.version>
         <jackson-databind.version>2.17.2</jackson-databind.version>
         <nimbus-jose-jwt.version>9.37.3</nimbus-jose-jwt.version>
         <openai.java.version>4.6.1</openai.java.version>
-        <dashscope.java.version>2.22.4</dashscope.java.version>
+        <dashscope.java.version>2.22.9</dashscope.java.version>
         <google-genai.version>1.34.0</google-genai.version>
         <pty4j.version>0.12.13</pty4j.version>
         <jqwik.version>1.9.2</jqwik.version>
@@ -230,6 +231,36 @@
             </dependency>
 
             <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>okhttp-jvm</artifactId>
+                <version>${okhttp.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>logging-interceptor</artifactId>
+                <version>${okhttp.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>okhttp-sse</artifactId>
+                <version>${okhttp.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.squareup.okio</groupId>
+                <artifactId>okio</artifactId>
+                <version>${okio.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.squareup.okio</groupId>
+                <artifactId>okio-jvm</artifactId>
+                <version>${okio.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>com.alibaba.nacos</groupId>
                 <artifactId>nacos-maintainer-client</artifactId>
                 <version>${nacos.client.version}</version>
@@ -305,6 +336,21 @@
             <dependency>
                 <groupId>io.agentscope</groupId>
                 <artifactId>agentscope</artifactId>
+                <version>${agentscope.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.agentscope</groupId>
+                <artifactId>agentscope-harness</artifactId>
+                <version>${agentscope.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.agentscope</groupId>
+                <artifactId>agentscope-extensions-model-openai</artifactId>
+                <version>${agentscope.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.agentscope</groupId>
+                <artifactId>agentscope-extensions-model-dashscope</artifactId>
                 <version>${agentscope.version}</version>
             </dependency>
 

@@ -1,6 +1,13 @@
-import { CloseOutlined, SearchOutlined } from '@ant-design/icons';
-import { Button, Input, Modal, Skeleton, Switch, type ModalProps } from 'antd';
-import { useMemo, useState } from 'react';
+import {
+  CloseOutlined,
+  InboxOutlined,
+  LeftOutlined,
+  RightOutlined,
+  SearchOutlined,
+} from '@ant-design/icons';
+import { Input, Modal, Skeleton, Switch, type ModalProps } from 'antd';
+import { Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import McpCard from './McpCard';
@@ -44,8 +51,10 @@ function McpModal(props: McpModal) {
   } = props;
   const { t } = useTranslation('chat');
   const [searchText, setSearchText] = useState('');
-
   const [active, setActive] = useState('all');
+  const [canScrollCategoriesLeft, setCanScrollCategoriesLeft] = useState(false);
+  const [canScrollCategoriesRight, setCanScrollCategoriesRight] = useState(false);
+  const categoryListRef = useRef<HTMLDivElement>(null);
 
   const scbscriptsIds = useMemo(() => {
     return subscripts.map((v) => v.productId);
@@ -61,6 +70,33 @@ function McpModal(props: McpModal) {
     }
     return data;
   }, [data, active, added]);
+
+  const updateCategoryScrollState = useCallback(() => {
+    const categoryList = categoryListRef.current;
+    if (!categoryList) return;
+
+    setCanScrollCategoriesLeft(categoryList.scrollLeft > 1);
+    setCanScrollCategoriesRight(
+      categoryList.scrollLeft + categoryList.clientWidth < categoryList.scrollWidth - 1,
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!modalProps.open) return;
+
+    const frame = requestAnimationFrame(updateCategoryScrollState);
+    const categoryList = categoryListRef.current;
+    const resizeObserver = new ResizeObserver(updateCategoryScrollState);
+    if (categoryList) {
+      resizeObserver.observe(categoryList);
+    }
+
+    return () => {
+      cancelAnimationFrame(frame);
+      resizeObserver.disconnect();
+    };
+  }, [categories, modalProps.open, updateCategoryScrollState]);
+
   return (
     <Modal
       {...modalProps}
@@ -69,14 +105,16 @@ function McpModal(props: McpModal) {
       keyboard
       maskClosable={false}
       onCancel={onClose}
-      width="min(1240px, calc(100vw - 64px))"
+      width="min(1160px, calc(100vw - 64px))"
     >
       <div className="flex h-[min(74vh,760px)] flex-col overflow-hidden">
-        <div className="flex items-start justify-between gap-4 px-1 pb-4">
-          <h2 className="text-lg font-semibold text-gray-950">{t('mcpModal.title')}</h2>
+        <div className="flex items-center gap-3 px-0.5 pb-3">
+          <h2 className="truncate text-[17px] font-semibold leading-6 text-gray-700">
+            {t('mcpModal.title')}
+          </h2>
           <button
             aria-label={t('close', { ns: 'common' })}
-            className="flex h-9 w-9 items-center justify-center rounded-[10px] border-0 bg-transparent text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+            className="ml-auto flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[8px] border-0 bg-transparent text-gray-400 transition-colors hover:bg-[#F2F3F7] hover:text-gray-700"
             onClick={onClose}
             type="button"
           >
@@ -84,149 +122,159 @@ function McpModal(props: McpModal) {
           </button>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col rounded-[20px] bg-[#F7F9FC] p-3">
-          <div className="mb-3 grid grid-cols-[240px_minmax(0,1fr)] gap-4">
-            <div className="flex h-12 items-center justify-between rounded-[16px] bg-white px-4 shadow-[0_8px_22px_rgba(35,52,82,0.05)]">
-              <span className="text-sm font-semibold text-gray-800">{t('mcpModal.enabled')}</span>
-              <Switch checked={enabled} onChange={() => onEnabled(!enabled)} />
-            </div>
-            <Input
-              allowClear
-              className="h-12 rounded-[16px] border-transparent bg-white shadow-[0_8px_22px_rgba(35,52,82,0.05)]"
-              onChange={(e) => setSearchText(e.target.value)}
-              onKeyDown={(evt) => {
-                if (evt.code === 'Enter') {
-                  onSearch(active, (evt.target as HTMLInputElement).value.trim());
-                }
-              }}
-              placeholder={t('mcpModal.searchPlaceholder')}
-              prefix={<SearchOutlined className="text-gray-400" />}
-              size="large"
-              value={searchText}
-            />
+        <div className="flex min-w-0 flex-col gap-2.5 pb-2.5 sm:flex-row sm:items-center">
+          <Input
+            allowClear
+            className="h-9 w-full flex-shrink-0 rounded-[8px] border-[#E1E5EC] bg-[#F8F9FB] shadow-none transition-colors hover:border-[#D1D7E0] focus-within:border-colorPrimarySoftBorder focus-within:bg-white focus-within:ring-2 focus-within:ring-colorPrimary/10 sm:w-[320px] lg:w-[360px]"
+            onChange={(e) => setSearchText(e.target.value)}
+            onKeyDown={(evt) => {
+              if (evt.code === 'Enter') {
+                onSearch(active, (evt.target as HTMLInputElement).value.trim());
+              }
+            }}
+            placeholder={t('mcpModal.searchPlaceholder')}
+            prefix={<SearchOutlined className="text-gray-400" />}
+            value={searchText}
+          />
+
+          <div className="flex h-9 flex-shrink-0 items-center gap-2 rounded-[8px] bg-[#F3F5F8] px-2.5">
+            <span className="text-xs font-medium text-gray-500">{t('mcpModal.enabled')}</span>
+            <Switch checked={enabled} onChange={() => onEnabled(!enabled)} size="small" />
           </div>
 
-          <div className="grid min-h-0 flex-1 grid-cols-[240px_minmax(0,1fr)] gap-4 overflow-hidden">
-            <aside className="flex min-h-0 flex-col overflow-hidden rounded-[16px] bg-white p-4 shadow-[0_12px_30px_rgba(35,52,82,0.055)]">
-              <div>
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-xs font-medium text-gray-400">
-                    {t('mcpModal.addedCount', { count: added.length })}
-                  </div>
-                  {active === 'added' && added.length > 0 && (
-                    <button
-                      className="text-xs font-medium text-gray-400 transition-colors hover:text-colorPrimary"
-                      onClick={onRemoveAll}
-                      type="button"
-                    >
-                      {t('mcpModal.removeAll')}
-                    </button>
-                  )}
-                </div>
-                <button
-                  className={`
-                    mt-2 flex w-full items-center justify-between rounded-[14px] px-3.5 py-3 text-sm
-                    transition-all duration-200 ease-in-out active:scale-[0.98]
-                    ${active === 'added' ? 'bg-[#F0F3FF] text-colorPrimary' : 'bg-[#F8FAFC] text-gray-700 hover:bg-[#F3F6FA]'}
-                  `}
-                  onClick={() => {
-                    setActive('added');
-                    onFilter('added');
-                  }}
-                  type="button"
-                >
-                  <span className="font-semibold">{t('mcpModal.addedServers')}</span>
-                </button>
-              </div>
-
-              <div className="mt-5 flex min-h-0 flex-col gap-1 overflow-y-auto">
-                <div className="mb-1 px-1 text-xs font-medium text-gray-400">
-                  {t('mcpModal.scope')}
-                </div>
-                {categories.map((item) => (
-                  <button
-                    className={`
-                        flex w-full items-center justify-between overflow-hidden text-nowrap rounded-[14px] px-3.5 py-3 text-sm
-                        transition-all duration-200 ease-in-out active:scale-[0.98]
-                        ${active === item.categoryId ? 'bg-[#F0F3FF] text-colorPrimary' : 'bg-transparent text-gray-600 hover:bg-[#F8FAFC] hover:text-gray-900'}
-                      `}
-                    key={item.categoryId}
-                    onClick={() => {
-                      setActive(item.categoryId);
-                      onFilter(item.categoryId);
-                    }}
-                    type="button"
-                  >
-                    <span className="overflow-hidden text-ellipsis font-medium">{item.name}</span>
-                  </button>
-                ))}
-              </div>
-            </aside>
-
-            <section
-              className="min-h-0 min-w-0 overflow-hidden rounded-[16px] bg-white p-5 shadow-[0_12px_30px_rgba(35,52,82,0.055)]"
-              data-sign-name="mcp-list"
+          <div className="flex items-center gap-1">
+            <button
+              className={`h-9 flex-shrink-0 rounded-[8px] px-3 text-xs font-medium transition-colors active:scale-[0.98] ${
+                active === 'added'
+                  ? 'bg-colorPrimarySoft text-colorPrimary'
+                  : 'bg-[#F3F5F8] text-gray-500 hover:bg-colorPrimarySoftHover hover:text-gray-800'
+              }`}
+              onClick={() => {
+                setActive('added');
+                onFilter('added');
+              }}
+              type="button"
             >
-              <div className="h-full overflow-hidden">
-                {mcpLoading ? (
-                  <div className="grid h-full content-start gap-4 overflow-y-auto pr-1 lg:grid-cols-2 xl:grid-cols-3">
-                    {Array.from({ length: 6 }).map((_, index) => (
-                      <div
-                        className="flex h-[200px] flex-col gap-4 rounded-2xl border border-[#e5e5e5] bg-white/60 p-5"
-                        key={index}
-                      >
-                        <div className="flex items-start gap-3">
-                          <Skeleton.Avatar active shape="square" size={48} />
-                          <div className="flex flex-1 flex-col gap-2">
-                            <Skeleton.Input
-                              active
-                              size="small"
-                              style={{ height: 20, width: '70%' }}
-                            />
-                            <Skeleton.Button
-                              active
-                              size="small"
-                              style={{ height: 24, width: 60 }}
-                            />
-                          </div>
-                        </div>
-                        <div className="flex-1">
-                          <Skeleton active paragraph={{ rows: 2 }} title={false} />
-                        </div>
-                        <Skeleton.Button active block size="default" />
-                      </div>
-                    ))}
-                  </div>
-                ) : filteredData.length === 0 ? (
-                  <Empty
-                    active={active}
-                    onViewAll={() => {
-                      setActive('all');
-                      onFilter('all');
-                    }}
-                  />
-                ) : (
-                  <div
-                    className="grid h-full content-start gap-4 overflow-y-auto pr-1 lg:grid-cols-2 xl:grid-cols-3"
-                    data-sign-name="mcp-card-grid"
-                  >
-                    {filteredData.map((item) => (
-                      <McpCard
-                        data={item}
-                        isAdded={addedIds.includes(item.productId)}
-                        isSubscribed={scbscriptsIds.includes(item.productId)}
-                        key={item.productId}
-                        onAdd={onAdd}
-                        onQuickSubscribe={onQuickSubscribe}
-                        onRemove={onRemove}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
+              {t('mcpModal.addedCount', { count: added.length })}
+            </button>
+            {active === 'added' && added.length > 0 && (
+              <button
+                aria-label={t('mcpModal.removeAll')}
+                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[8px] text-gray-400 transition-colors hover:bg-[#F2F3F7] hover:text-gray-700"
+                onClick={onRemoveAll}
+                title={t('mcpModal.removeAll')}
+                type="button"
+              >
+                <Trash2 aria-hidden="true" size={14} strokeWidth={1.8} />
+              </button>
+            )}
           </div>
         </div>
+
+        <div className="flex min-w-0 items-center gap-1 pb-3">
+          {canScrollCategoriesLeft && (
+            <button
+              aria-label={t('modelSelector.previousCategories')}
+              className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[7px] text-gray-400 transition-colors hover:bg-colorPrimarySoftHover hover:text-colorPrimary"
+              onClick={() => categoryListRef.current?.scrollBy({ behavior: 'smooth', left: -240 })}
+              type="button"
+            >
+              <LeftOutlined className="text-[10px]" />
+            </button>
+          )}
+          <div
+            className="scrollbar-hide flex min-w-0 flex-1 gap-1 overflow-x-auto"
+            onScroll={updateCategoryScrollState}
+            ref={categoryListRef}
+          >
+            {categories.map((item) => (
+              <button
+                className={`h-8 flex-shrink-0 rounded-[7px] px-2.5 text-xs font-medium transition-colors active:scale-[0.98] ${
+                  active === item.categoryId
+                    ? 'bg-colorPrimarySoft text-colorPrimary'
+                    : 'text-gray-500 hover:bg-colorPrimarySoftHover hover:text-gray-800'
+                }`}
+                key={item.categoryId}
+                onClick={(event) => {
+                  setActive(item.categoryId);
+                  onFilter(item.categoryId);
+                  event.currentTarget.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                    inline: 'nearest',
+                  });
+                }}
+                type="button"
+              >
+                {item.name}
+              </button>
+            ))}
+          </div>
+          {canScrollCategoriesRight && (
+            <button
+              aria-label={t('modelSelector.nextCategories')}
+              className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[7px] text-gray-400 transition-colors hover:bg-colorPrimarySoftHover hover:text-colorPrimary"
+              onClick={() => categoryListRef.current?.scrollBy({ behavior: 'smooth', left: 240 })}
+              type="button"
+            >
+              <RightOutlined className="text-[10px]" />
+            </button>
+          )}
+        </div>
+
+        <section
+          className="min-h-0 min-w-0 flex-1 overflow-hidden border-t border-[#EDF0F4] pt-3"
+          data-sign-name="mcp-list"
+        >
+          <div className="h-full overflow-hidden">
+            {mcpLoading ? (
+              <div className="grid h-full content-start gap-3 overflow-y-auto pb-1 pr-1 lg:grid-cols-2 xl:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <div
+                    className="flex h-[152px] flex-col rounded-xl border border-[#DDE4EF] bg-white p-4 shadow-[0_6px_20px_rgba(31,42,68,0.04)]"
+                    key={index}
+                  >
+                    <div className="mb-3 flex items-start gap-3">
+                      <Skeleton.Avatar active shape="square" size={44} />
+                      <div className="flex flex-1 flex-col gap-2">
+                        <Skeleton.Input active size="small" style={{ height: 18, width: '70%' }} />
+                        <Skeleton.Input active size="small" style={{ height: 12, width: 92 }} />
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <Skeleton active paragraph={{ rows: 3 }} title={false} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredData.length === 0 ? (
+              <Empty
+                active={active}
+                onViewAll={() => {
+                  setActive('all');
+                  onFilter('all');
+                }}
+              />
+            ) : (
+              <div
+                className="grid h-full content-start gap-3 overflow-y-auto pb-1 pr-1 lg:grid-cols-2 xl:grid-cols-3"
+                data-sign-name="mcp-card-grid"
+              >
+                {filteredData.map((item) => (
+                  <McpCard
+                    data={item}
+                    isAdded={addedIds.includes(item.productId)}
+                    isSubscribed={scbscriptsIds.includes(item.productId)}
+                    key={item.productId}
+                    onAdd={onAdd}
+                    onQuickSubscribe={onQuickSubscribe}
+                    onRemove={onRemove}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
       </div>
     </Modal>
   );
@@ -234,24 +282,28 @@ function McpModal(props: McpModal) {
 
 function Empty({ active, onViewAll }: { active: string; onViewAll: () => void }) {
   const { t } = useTranslation('chat');
+  const isAddedView = active === 'added';
 
   return (
     <div className="flex h-full items-center justify-center">
-      <div className="flex max-w-[360px] flex-col items-center gap-4 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-[18px] border border-[#E6ECF4] bg-white/70 text-gray-400">
-          <SearchOutlined />
+      <div className="flex flex-col items-center gap-2.5 text-center">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100">
+          <InboxOutlined className="text-base text-gray-400" />
         </div>
-        <div>
-          <div className="text-base font-semibold text-gray-900">{t('mcpModal.noServers')}</div>
-          {active === 'added' && (
-            <p className="mt-2 text-sm leading-6 text-gray-500">{t('mcpModal.addedEmptyHint')}</p>
+        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm">
+          <span className="text-[#858D9B]">
+            {t(isAddedView ? 'mcpModal.noAddedServers' : 'mcpModal.noServers')}
+          </span>
+          {isAddedView && (
+            <button
+              className="font-medium text-colorPrimary transition-colors hover:text-colorPrimaryHover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-colorPrimary/15"
+              onClick={onViewAll}
+              type="button"
+            >
+              {t('mcpModal.viewAll')}
+            </button>
           )}
         </div>
-        {active === 'added' && (
-          <Button className="rounded-[12px]" onClick={onViewAll} type="primary">
-            {t('mcpModal.viewAll')}
-          </Button>
-        )}
       </div>
     </div>
   );

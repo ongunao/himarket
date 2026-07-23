@@ -18,61 +18,42 @@
  */
 package com.alibaba.himarket.service.hichat.service.dashscope;
 
-import io.agentscope.core.formatter.dashscope.dto.DashScopeMessage;
-import io.agentscope.core.formatter.dashscope.dto.DashScopeRequest;
-import io.agentscope.core.formatter.dashscope.dto.DashScopeResponse;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.model.ChatModelBase;
 import io.agentscope.core.model.ChatResponse;
-import io.agentscope.core.model.DashScopeHttpClient;
-import io.agentscope.core.model.EndpointType;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.model.ModelUtils;
 import io.agentscope.core.model.ToolChoice;
 import io.agentscope.core.model.ToolSchema;
 import io.agentscope.core.model.transport.HttpTransport;
 import io.agentscope.core.model.transport.HttpTransportFactory;
+import io.agentscope.extensions.model.dashscope.DashScopeHttpClient;
+import io.agentscope.extensions.model.dashscope.EndpointType;
+import io.agentscope.extensions.model.dashscope.dto.DashScopeMessage;
+import io.agentscope.extensions.model.dashscope.dto.DashScopeRequest;
+import io.agentscope.extensions.model.dashscope.dto.DashScopeResponse;
 import java.time.Instant;
 import java.util.List;
-import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 
 /**
  * DashScope chat model for image generation.
  *
- * <p>This class is specifically designed for DashScope text-to-image models (Qwen/Wanx series).
- * Unlike standard text models, image generation models require:
+ * <p>This class adapts DashScope synchronous image generation models. Unlike standard text models,
+ * image generation models require:
  * <ul>
  *   <li>Multimodal API endpoint ({@code /multimodal-generation/generation})
  *   <li>Specialized response parsing to extract image URLs from {@code content} field
- *   <li>Model name validation against supported image models whitelist
  * </ul>
  *
- * <p>For text-only models, use {@code io.agentscope.core.model.DashScopeChatModel} instead.
+ * <p>For text-only models, use {@code
+ * io.agentscope.extensions.model.dashscope.DashScopeChatModel} instead.
  *
  * @see DashScopeImageFormatter
  */
 @Slf4j
 public class DashScopeImageChatModel extends ChatModelBase {
-
-    private static final Set<String> SUPPORTED_MODELS =
-            Set.of(
-                    // Qwen Text-to-Image series
-                    "z-image-turbo",
-                    "qwen-image-max",
-                    "qwen-image-max-2025-12-30",
-                    "qwen-image-plus",
-                    "qwen-image-plus-2026-01-09",
-                    "qwen-image",
-                    // Wanx v2 series
-                    "wan2.6-t2i",
-                    "wan2.5-t2i-preview",
-                    "wan2.2-t2i-flash",
-                    "wan2.2-t2i-plus",
-                    "wanx2.1-t2i-turbo",
-                    "wanx2.1-t2i-plus",
-                    "wanx2.0-t2i-turbo");
 
     private final String modelName;
     private final Boolean enableSearch; // nullable
@@ -84,10 +65,10 @@ public class DashScopeImageChatModel extends ChatModelBase {
      * Create a new DashScope image generation model.
      *
      * @param apiKey         DashScope API key
-     * @param modelName      model name (must be in the supported image models list)
+     * @param modelName      model name
      * @param enableSearch   whether search enhancement should be enabled
      * @param defaultOptions default generation options
-     * @param baseUrl        full API URL
+     * @param baseUrl       DashScopeImageChatModel full API URL
      * @param httpTransport  optional HTTP transport
      */
     public DashScopeImageChatModel(
@@ -97,16 +78,6 @@ public class DashScopeImageChatModel extends ChatModelBase {
             GenerateOptions defaultOptions,
             String baseUrl,
             HttpTransport httpTransport) {
-
-        if (!SUPPORTED_MODELS.contains(modelName)) {
-            throw new IllegalArgumentException(
-                    String.format(
-                            "Model '%s' is not a supported image generation model. "
-                                    + "Supported models: %s. "
-                                    + "Please use DashScopeChatModel for text-only models.",
-                            modelName, getSupportedModels()));
-        }
-
         this.modelName = modelName;
         this.enableSearch = enableSearch;
         this.defaultOptions =
@@ -149,7 +120,7 @@ public class DashScopeImageChatModel extends ChatModelBase {
                 formatter.buildRequest(
                         modelName,
                         dashScopeMessages,
-                        true,
+                        false,
                         options,
                         defaultOptions,
                         tools,
@@ -188,15 +159,6 @@ public class DashScopeImageChatModel extends ChatModelBase {
     @Override
     public String getModelName() {
         return modelName;
-    }
-
-    /**
-     * Get the set of supported image generation models.
-     *
-     * @return unmodifiable set of supported model names
-     */
-    public Set<String> getSupportedModels() {
-        return SUPPORTED_MODELS;
     }
 
     /**
@@ -277,7 +239,6 @@ public class DashScopeImageChatModel extends ChatModelBase {
          * Build the DashScopeImageChatModel instance.
          *
          * @return configured image generation model
-         * @throws IllegalArgumentException if model name is not in supported models list
          */
         public DashScopeImageChatModel build() {
             GenerateOptions effectiveOptions =

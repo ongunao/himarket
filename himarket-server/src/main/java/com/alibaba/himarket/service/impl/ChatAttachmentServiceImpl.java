@@ -30,10 +30,12 @@ import com.alibaba.himarket.entity.ChatAttachment;
 import com.alibaba.himarket.repository.ChatAttachmentRepository;
 import com.alibaba.himarket.service.ChatAttachmentService;
 import com.alibaba.himarket.support.enums.ChatAttachmentType;
+import java.time.LocalDateTime;
 import java.util.Base64;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
@@ -41,11 +43,16 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class ChatAttachmentServiceImpl implements ChatAttachmentService {
 
+    private static final int MAX_GENERATED_IMAGE_SIZE = 16 * 1024 * 1024 - 1;
+
+    private static final int ATTACHMENT_RETENTION_DAYS = 90;
+
     private final ContextHolder contextHolder;
 
     private final ChatAttachmentRepository chatAttachmentRepository;
 
     @Override
+    @Transactional
     public ChatAttachmentResult uploadAttachment(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "File cannot be empty");
@@ -86,6 +93,46 @@ public class ChatAttachmentServiceImpl implements ChatAttachmentService {
         }
     }
 
+    @Override
+    @Transactional
+    public ChatAttachmentResult saveGeneratedImage(String userId, String mimeType, byte[] data) {
+        if (userId == null || userId.isBlank() || data == null || data.length == 0) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST, "Generated image data cannot be empty");
+        }
+        if (data.length > MAX_GENERATED_IMAGE_SIZE) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST, "Generated image exceeds the storage limit");
+        }
+        if (mimeType == null) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST, "Generated image type cannot be empty");
+        }
+
+        String extension =
+                switch (mimeType) {
+                    case "image/png" -> "png";
+                    case "image/jpeg" -> "jpg";
+                    case "image/webp" -> "webp";
+                    default ->
+                            throw new BusinessException(
+                                    ErrorCode.INVALID_REQUEST,
+                                    "Unsupported generated image type: " + mimeType);
+                };
+        String attachmentId = IdGenerator.genChatAttachmentId();
+        ChatAttachment attachment =
+                ChatAttachment.builder()
+                        .attachmentId(attachmentId)
+                        .userId(userId)
+                        .name("generated-image-" + attachmentId + "." + extension)
+                        .type(ChatAttachmentType.IMAGE)
+                        .mimeType("image/" + ("jpg".equals(extension) ? "jpeg" : extension))
+                        .size((long) data.length)
+                        .data(data)
+                        .build();
+        return new ChatAttachmentResult().convertFrom(chatAttachmentRepository.save(attachment));
+    }
+
     /**
      * Determine attachment type from MIME type
      *
@@ -116,10 +163,9 @@ public class ChatAttachmentServiceImpl implements ChatAttachmentService {
         String base64Data = Base64.getEncoder().encodeToString(attachment.getData());
 
         log.debug(
-                "Retrieved attachment detail, attachmentId={}, size={}, base64Data={}",
+                "Retrieved attachment detail, attachmentId={}, size={}",
                 attachmentId,
-                attachment.getSize(),
-                base64Data);
+                attachment.getSize());
 
         return ChatAttachmentDetailResult.builder()
                 .attachmentId(attachment.getAttachmentId())
@@ -131,9 +177,24 @@ public class ChatAttachmentServiceImpl implements ChatAttachmentService {
                 .build();
     }
 
+    @Override
+    @Transactional
+    public int cleanupExpiredAttachments() {
+        LocalDateTime expiredBefore = LocalDateTime.now().minusDays(ATTACHMENT_RETENTION_DAYS);
+        int deletedCount = chatAttachmentRepository.deleteExpiredAttachments(expiredBefore);
+        log.debug(
+                "Cleaned expired chat attachments, expiredBefore={}, deletedCount={}",
+                expiredBefore,
+                deletedCount);
+        return deletedCount;
+    }
+
     private ChatAttachment findAttachment(String attachmentId) {
         return chatAttachmentRepository
-                .findByAttachmentId(attachmentId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, attachmentId));
+                .findByAttachmentIdAndUserId(attachmentId, contextHolder.getUser())
+                .orElseThrow(
+                        () ->
+                                new BusinessException(
+                                        ErrorCode.NOT_FOUND, "Chat attachment", attachmentId));
     }
 }

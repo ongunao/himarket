@@ -306,7 +306,7 @@ export function CodingInput({
       aria-label={t('input.dropArea')}
       className={`relative ${
         variant === 'welcome'
-          ? 'px-4 py-4'
+          ? 'px-5 pb-4 pt-2'
           : 'px-5 py-4 bg-white/60 backdrop-blur-md shadow-[0_-4px_16px_rgba(0,0,0,0.06)] border-t border-gray-100/80'
       } ${dragOver ? 'ring-2 ring-blue-400 ring-inset bg-blue-50/30' : ''}`}
       onDragLeave={handleDragLeave}
@@ -444,9 +444,9 @@ export function CodingInput({
         /* Welcome 模式布局 */
         <>
           <textarea
-            className="w-full resize-none rounded-[10px] border border-gray-200/80 bg-white/80 px-4 py-2.5
-                       text-sm text-gray-700 placeholder-gray-400
-                       outline-none focus:border-gray-300 focus:shadow-sm transition-all
+            className="w-full resize-none border-0 bg-transparent px-0 py-2
+                       text-[15px] text-[#4F5868] placeholder:text-[#9AA1AE]
+                       outline-none focus:ring-0
                        min-h-[80px] max-h-[200px] overflow-y-hidden"
             disabled={disabled}
             onChange={(e) => handleChange(e.target.value)}
@@ -457,10 +457,10 @@ export function CodingInput({
             rows={2}
             value={text}
           />
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+          <div className="mt-1 flex items-center justify-between">
             <div className="flex items-center gap-1">
               <button
-                className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100/60 transition-colors
+                className="rounded-[8px] p-2 text-[#858D9C] transition-colors hover:bg-white/55 hover:text-[#626B7B]
                            disabled:opacity-30 disabled:cursor-not-allowed"
                 disabled={disabled || uploading || attachments.length >= MAX_ATTACHMENTS}
                 onClick={() => fileInputRef.current?.click()}
@@ -471,8 +471,8 @@ export function CodingInput({
               {toolbarExtra}
             </div>
             <button
-              className="w-9 h-9 rounded-full bg-gray-800 text-white flex items-center justify-center
-                         hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-[#6F69E8] text-white
+                         transition-colors hover:bg-[#625DDA] disabled:bg-[#D9DDF6] disabled:cursor-not-allowed"
               disabled={!canSend}
               onClick={handleSend}
             >

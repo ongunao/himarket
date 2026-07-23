@@ -266,10 +266,17 @@ function ModelDetail() {
 
   const leftContent = data ? (
     <ProductDetailTabs
+      appearance="model"
       defaultActiveKey="overview"
       items={[
         {
-          children: <ProductOverview content={data?.document} emptyText={t('overview.empty')} />,
+          children: (
+            <ProductOverview
+              appearance="market"
+              content={data?.document}
+              emptyText={t('overview.empty')}
+            />
+          ),
           key: 'overview',
           label: (
             <ProductDetailTabLabel icon={<FileTextOutlined />}>
@@ -282,7 +289,7 @@ function ModelDetail() {
             <div className="space-y-6">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {modelConfig.modelAPIConfig.modelCategory && (
-                  <div className="rounded-[12px] border border-[#E8EDF5] bg-[#FBFCFE] p-4">
+                  <div className="rounded-[10px] bg-[#F5F6F9] p-4">
                     <div className="text-sm text-gray-500 mb-1">
                       {t('configuration.applicationScenario')}
                     </div>
@@ -291,7 +298,7 @@ function ModelDetail() {
                     </div>
                   </div>
                 )}
-                <div className="rounded-[12px] border border-[#E8EDF5] bg-[#FBFCFE] p-4">
+                <div className="rounded-[10px] bg-[#F5F6F9] p-4">
                   <div className="text-sm text-gray-500 mb-1">{t('configuration.protocol')}</div>
                   <div className="text-sm font-medium text-gray-900">
                     {modelConfig.modelAPIConfig.aiProtocols?.join(', ') || 'DashScope'}
@@ -617,7 +624,7 @@ function ModelDetail() {
 
   const rightContent = (
     <>
-      <section className="rounded-[14px] border border-[#DDE5F0] bg-white/90 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.05)] backdrop-blur-sm">
+      <section className="rounded-[12px] border border-[#E0E5ED] bg-white/70 p-4 backdrop-blur-xl">
         <div className="mb-3 flex rounded-lg bg-gray-100 p-1">
           <button
             className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-xs transition-all ${
@@ -656,6 +663,7 @@ function ModelDetail() {
 
   return (
     <ProductDetailLayout
+      appearance="model"
       error={error || (!data ? t('errors.notFound') : undefined)}
       headerProps={
         data

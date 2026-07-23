@@ -13,16 +13,23 @@ import { useTranslation } from 'react-i18next';
 import { ProductIconRenderer } from '../icon/ProductIconRenderer';
 import MarkdownRender from '../MarkdownRender';
 import { AttachmentPreview, type PreviewAttachment } from './AttachmentPreview';
-import { McpToolCallPanel, McpToolCallItem } from './McpToolCallPanel';
+import { McpToolCallPanel } from './McpToolCallPanel';
 import { copyToClipboard } from '../../lib/utils';
 
-import type { IModelConversation } from '../../types';
+import type {
+  IChatMessageChunk,
+  IGeneratedImage,
+  IModelConversation,
+  IMcpToolCall,
+  IMcpToolResponse,
+} from '../../types';
 
 interface MessageListProps {
   conversations: IModelConversation['conversations'];
+  generating: boolean;
+  streamingQuestionId?: string;
   modelName?: string;
-  modelIcon?: string; // 添加模型 icon
-  variant?: 'default' | 'compare';
+  modelIcon?: string;
   onRefresh?: (
     msg: IModelConversation['conversations'][0],
     quest: IModelConversation['conversations'][0]['questions'][0],
@@ -34,16 +41,19 @@ interface MessageListProps {
     direction: 'prev' | 'next',
   ) => void;
   autoScrollEnabled?: boolean;
+  onEditImage?: (image: IGeneratedImage) => void;
 }
 
 export function Messages({
   autoScrollEnabled = true,
   conversations,
+  generating,
   modelIcon,
   modelName = 'AI Assistant',
   onChangeVersion,
+  onEditImage,
   onRefresh,
-  variant = 'default',
+  streamingQuestionId,
 }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -58,30 +68,28 @@ export function Messages({
   }, [conversations, autoScrollEnabled]);
 
   return (
-    <div
-      className={
-        variant === 'compare'
-          ? 'w-full px-4 pb-4 pt-3'
-          : 'mx-auto w-full max-w-[1040px] px-5 pb-5 pt-4'
-      }
-    >
-      <div className={variant === 'compare' ? 'space-y-5' : 'space-y-6'}>
-        {conversations.map((conversation, index) => {
-          return conversation.questions.map((question) => {
+    <div className="mx-auto w-full max-w-[1040px] px-4 pb-5 pt-4 sm:px-5">
+      <div className="space-y-6">
+        {conversations.map((conversation, conversationIndex) => {
+          return conversation.questions.map((question, questionIndex) => {
             const activeAnswer = question.answers[question.activeAnswerIndex];
+            const isLast =
+              conversationIndex === conversations.length - 1 &&
+              questionIndex === conversation.questions.length - 1;
             return (
               <Message
                 activeAnswer={activeAnswer}
                 conversation={conversation}
-                isLast={index === conversations.length - 1}
+                isLast={isLast}
                 isNewChat={question.isNewQuestion !== false}
+                isStreaming={generating && question.id === streamingQuestionId}
                 key={question.id}
                 modelIcon={modelIcon}
                 modelName={modelName}
                 onChangeVersion={onChangeVersion}
+                onEditImage={onEditImage}
                 onRefresh={onRefresh}
                 question={question}
-                variant={variant}
               />
             );
           });
@@ -97,12 +105,13 @@ function Message({
   conversation,
   isLast,
   isNewChat,
+  isStreaming,
   modelIcon,
   modelName,
   onChangeVersion,
+  onEditImage,
   onRefresh,
   question,
-  variant,
 }: {
   conversation: IModelConversation['conversations'][0];
   question: IModelConversation['conversations'][0]['questions'][0];
@@ -111,17 +120,18 @@ function Message({
   modelName?: string;
   isNewChat?: boolean;
   isLast: boolean;
+  isStreaming: boolean;
   onChangeVersion?: (
     conversationId: string,
     questionId: string,
     direction: 'prev' | 'next',
   ) => void;
+  onEditImage?: (image: IGeneratedImage) => void;
   onRefresh?: (
     msg: IModelConversation['conversations'][0],
     quest: IModelConversation['conversations'][0]['questions'][0],
     isLast: boolean,
   ) => void;
-  variant: 'default' | 'compare';
 }) {
   const { t } = useTranslation('chat');
   const contentRef = useRef<HTMLDivElement>(null);
@@ -131,7 +141,13 @@ function Message({
     return true;
   });
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const isCompare = variant === 'compare';
+  const questionAttachments = question.attachments || [];
+  const hasAnswerContent = Boolean(
+    activeAnswer?.content ||
+    activeAnswer?.messageChunks?.length ||
+    activeAnswer?.mcpToolCalls?.length ||
+    activeAnswer?.mcpToolResponses?.length,
+  );
 
   const handleCopy = async (content: string, messageId: string) => {
     copyToClipboard(content).then(() => {
@@ -160,38 +176,30 @@ function Message({
   return (
     <div key={question.id}>
       <div className="flex justify-end">
-        <div
-          className={`flex flex-col items-end gap-2 ${isCompare ? 'max-w-[86%]' : 'max-w-[78%]'}`}
-        >
-          {question.attachments && question.attachments.length > 0 && (
+        <div className="flex max-w-[88%] flex-col items-end gap-2 sm:max-w-[78%]">
+          {questionAttachments.length > 0 && (
             <AttachmentPreview
-              attachments={question.attachments as PreviewAttachment[]}
+              attachments={questionAttachments as PreviewAttachment[]}
               className="mb-1 justify-end"
             />
           )}
-          <div className="rounded-[16px] rounded-tr-md bg-colorPrimary px-4 py-3 text-white shadow-sm">
+          <div className="flex items-center rounded-[16px] rounded-tr-md bg-colorPrimarySoftHover px-4 py-3 text-[#4F5665]">
             <div className="whitespace-pre-wrap text-[15px] leading-relaxed tracking-normal">
               {question.content}
             </div>
           </div>
         </div>
       </div>
-      <div className={isCompare ? 'mt-3' : 'mt-4'}>
+      <div className="mt-4">
         {/* 消息内容区域 */}
         <div className="min-w-0">
           <div className="mb-2 flex items-center gap-2">
-            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[12px] border border-[#DDE5F0] bg-white shadow-sm">
-              <ProductIconRenderer className="w-5 h-5" iconType={modelIcon} />
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-[8px]">
+              <ProductIconRenderer className="h-full w-full object-cover" iconType={modelIcon} />
             </div>
             <div className="text-sm font-medium leading-5 text-gray-600">{modelName}</div>
           </div>
-          <div
-            className={
-              isCompare
-                ? 'rounded-[14px] border border-[#E6ECF4] bg-white px-4 py-3 shadow-none'
-                : 'rounded-[18px] bg-white/55 px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-[2px]'
-            }
-          >
+          <div className="rounded-[18px] bg-white/55 px-4 py-4 backdrop-blur-[2px] sm:px-5">
             <div
               className={`${!isNewChat && expandedContent ? 'max-h-40 overflow-hidden' : 'overflow-auto'} relative text-[15px] leading-[1.72] text-gray-700`}
               ref={contentRef}
@@ -209,101 +217,21 @@ function Message({
                   <DownCircleOutlined className="text-gray-500 mb-2" />
                 </button>
               )}
-              {/* 如果是错误状态，显示错误提示 */}
-              {activeAnswer?.errorMsg ? (
-                <div className="flex items-center gap-2 text-red-500">
-                  <span>{activeAnswer?.errorMsg || t('messages.networkError')}</span>
-                </div>
-              ) : conversation.loading ? (
-                /* 如果内容为空且正在加载，显示 loading */
-                <div className="space-y-3">
-                  {/* 如果有 tool_call，先显示工具调用框 - 从当前活跃 answer 中获取 */}
-                  {activeAnswer?.messageChunks?.map((chunk) => {
-                    if (chunk.type === 'tool_call' && chunk.toolCall) {
-                      const toolResultChunk = activeAnswer.messageChunks?.find(
-                        (c) => c.type === 'tool_result' && c.toolResult?.id === chunk.toolCall?.id,
-                      );
-                      return (
-                        <McpToolCallItem
-                          key={chunk.id}
-                          toolCall={chunk.toolCall}
-                          toolResponse={toolResultChunk?.toolResult}
-                        />
-                      );
-                    }
-                    return null;
-                  })}
-                  {/* 显示 loading 动画 */}
-                  <div className="flex items-center gap-2 text-gray-500">
-                    <div className="flex items-center gap-1">
-                      <span
-                        className="w-1.5 h-1.5 bg-colorPrimary rounded-full"
-                        style={{ animation: 'bounceStrong 1s infinite', animationDelay: '0ms' }}
-                      ></span>
-                      <span
-                        className="w-1.5 h-1.5 bg-colorPrimary rounded-full"
-                        style={{ animation: 'bounceStrong 1s infinite', animationDelay: '150ms' }}
-                      ></span>
-                      <span
-                        className="w-1.5 h-1.5 bg-colorPrimary rounded-full"
-                        style={{ animation: 'bounceStrong 1s infinite', animationDelay: '300ms' }}
-                      ></span>
-                    </div>
+              <div className="space-y-3">
+                {(!activeAnswer?.errorMsg || hasAnswerContent) && (
+                  <AnswerBody
+                    activeAnswer={activeAnswer}
+                    isStreaming={isStreaming}
+                    loading={conversation.loading}
+                    onEditImage={onEditImage}
+                  />
+                )}
+                {activeAnswer?.errorMsg && (
+                  <div className="flex items-center gap-2 text-red-500">
+                    <span>{activeAnswer.errorMsg}</span>
                   </div>
-                </div>
-              ) : activeAnswer?.messageChunks && activeAnswer.messageChunks.length > 0 ? (
-                /* 新逻辑：按 messageChunks 顺序渲染 */
-                <div className="space-y-3">
-                  {activeAnswer.messageChunks.map((chunk) => {
-                    if (chunk.type === 'text' && chunk.content) {
-                      return (
-                        <div key={chunk.id}>
-                          <MarkdownRender
-                            content={chunk.content}
-                            imageStyle="card"
-                            variant="chat"
-                          />
-                        </div>
-                      );
-                    }
-                    if (chunk.type === 'tool_call' && chunk.toolCall) {
-                      // 查找对应的 tool_result
-                      const toolResultChunk = activeAnswer.messageChunks?.find(
-                        (c) => c.type === 'tool_result' && c.toolResult?.id === chunk.toolCall?.id,
-                      );
-                      return (
-                        <McpToolCallItem
-                          key={chunk.id}
-                          toolCall={chunk.toolCall}
-                          toolResponse={toolResultChunk?.toolResult}
-                        />
-                      );
-                    }
-                    // tool_result 已在 tool_call 中处理，跳过
-                    return null;
-                  })}
-                </div>
-              ) : (
-                /* 旧逻辑：兼容历史数据 - 从当前活跃 answer 中获取 tool calls */
-                <>
-                  {/* MCP 工具调用面板 */}
-                  {activeAnswer?.mcpToolCalls && activeAnswer.mcpToolCalls.length > 0 && (
-                    <div className="mb-3">
-                      <McpToolCallPanel
-                        toolCalls={activeAnswer.mcpToolCalls}
-                        toolResponses={activeAnswer.mcpToolResponses}
-                      />
-                    </div>
-                  )}
-                  <div>
-                    <MarkdownRender
-                      content={activeAnswer?.content || ''}
-                      imageStyle="card"
-                      variant="chat"
-                    />
-                  </div>
-                </>
-              )}
+                )}
+              </div>
             </div>
           </div>
 
@@ -426,4 +354,214 @@ function Message({
       </div>
     </div>
   );
+}
+
+function AnswerBody({
+  activeAnswer,
+  isStreaming,
+  loading,
+  onEditImage,
+}: {
+  activeAnswer?: IModelConversation['conversations'][0]['questions'][0]['answers'][0];
+  isStreaming: boolean;
+  loading: boolean;
+  onEditImage?: (image: IGeneratedImage) => void;
+}) {
+  const chunks = activeAnswer?.messageChunks;
+  if (chunks && chunks.length > 0) {
+    return (
+      <div className="space-y-3">
+        <MessageChunks chunks={chunks} isStreaming={isStreaming} onEditImage={onEditImage} />
+        {loading && <LoadingIndicator />}
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {activeAnswer?.mcpToolCalls && activeAnswer.mcpToolCalls.length > 0 && (
+          <McpToolCallPanel
+            toolCalls={activeAnswer.mcpToolCalls}
+            toolResponses={activeAnswer.mcpToolResponses}
+          />
+        )}
+        <LoadingIndicator />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {activeAnswer?.mcpToolCalls && activeAnswer.mcpToolCalls.length > 0 && (
+        <div className="mb-3">
+          <McpToolCallPanel
+            toolCalls={activeAnswer.mcpToolCalls}
+            toolResponses={activeAnswer.mcpToolResponses}
+          />
+        </div>
+      )}
+      <MarkdownRender
+        content={activeAnswer?.content || ''}
+        imageStyle="card"
+        onEditImage={onEditImage}
+        variant="chat"
+      />
+    </>
+  );
+}
+
+function MessageChunks({
+  chunks,
+  isStreaming,
+  onEditImage,
+}: {
+  chunks: IChatMessageChunk[];
+  isStreaming: boolean;
+  onEditImage?: (image: IGeneratedImage) => void;
+}) {
+  return (
+    <>
+      {chunks.map((chunk, index) => {
+        if (chunk.type === 'ASSISTANT') {
+          return chunk.content ? (
+            <MarkdownRender
+              content={chunk.content}
+              imageStyle="card"
+              key={`assistant-${index}`}
+              onEditImage={onEditImage}
+              variant="chat"
+            />
+          ) : null;
+        }
+
+        if (chunk.type === 'THINKING') {
+          return chunk.content ? (
+            <ThinkingBlock
+              content={chunk.content}
+              isStreaming={isStreaming && index === chunks.length - 1}
+              key={`thinking-${index}`}
+            />
+          ) : null;
+        }
+
+        if (chunk.type === 'IMAGE') {
+          return chunk.attachmentId ? (
+            <MarkdownRender
+              content={`![](/api/v1/attachments/${chunk.attachmentId})`}
+              imageStyle="card"
+              key={`image-${chunk.attachmentId}`}
+              onEditImage={onEditImage}
+              variant="chat"
+            />
+          ) : null;
+        }
+
+        if (chunk.type === 'TOOL_CALL') {
+          const toolCall = toToolCall(chunk);
+          if (!toolCall) {
+            return null;
+          }
+
+          const toolResponse = findToolResponse(chunks, chunk);
+          return (
+            <McpToolCallPanel
+              key={`tool-call-${chunk.id || index}`}
+              toolCalls={[toolCall]}
+              toolResponses={toolResponse ? [toolResponse] : []}
+            />
+          );
+        }
+
+        return null;
+      })}
+    </>
+  );
+}
+
+function ThinkingBlock({ content, isStreaming }: { content: string; isStreaming: boolean }) {
+  const { t } = useTranslation('chat');
+  const [expanded, setExpanded] = useState(isStreaming);
+
+  useEffect(() => {
+    setExpanded(isStreaming);
+  }, [isStreaming]);
+
+  return (
+    <div className="overflow-hidden rounded-[10px] border border-[#E6EAF1] bg-[#F6F8FC]/90 text-sm text-gray-500">
+      <button
+        aria-expanded={expanded}
+        className="flex min-h-9 w-full items-center justify-between gap-3 px-3.5 py-2 text-left transition-colors hover:bg-white/55"
+        onClick={() => setExpanded((value) => !value)}
+        type="button"
+      >
+        <span className="flex items-center gap-2 text-xs font-medium text-gray-500">
+          {isStreaming && (
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-colorPrimary" />
+          )}
+          {t('messages.thinking')}
+        </span>
+        <RightOutlined
+          aria-hidden="true"
+          className={`text-[10px] text-gray-400 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`}
+        />
+      </button>
+      {expanded && (
+        <div className="border-t border-[#E8ECF3] px-3.5 py-3">
+          <MarkdownRender content={content} variant="thinking" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LoadingIndicator() {
+  return (
+    <div className="flex items-center gap-2 text-gray-500">
+      <div className="flex items-center gap-1">
+        <span
+          className="h-1.5 w-1.5 rounded-full bg-colorPrimary"
+          style={{ animation: 'bounceStrong 1s infinite', animationDelay: '0ms' }}
+        />
+        <span
+          className="h-1.5 w-1.5 rounded-full bg-colorPrimary"
+          style={{ animation: 'bounceStrong 1s infinite', animationDelay: '150ms' }}
+        />
+        <span
+          className="h-1.5 w-1.5 rounded-full bg-colorPrimary"
+          style={{ animation: 'bounceStrong 1s infinite', animationDelay: '300ms' }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function toToolCall(chunk: IChatMessageChunk): IMcpToolCall | null {
+  if (!chunk.id || !chunk.name) {
+    return null;
+  }
+
+  return {
+    arguments:
+      typeof chunk.arguments === 'string' ? chunk.arguments : JSON.stringify(chunk.arguments ?? {}),
+    id: chunk.id,
+    name: chunk.name,
+    type: 'function',
+  };
+}
+
+function findToolResponse(
+  chunks: IChatMessageChunk[],
+  toolCall: IChatMessageChunk,
+): IMcpToolResponse | undefined {
+  const response = chunks.find((chunk) => chunk.type === 'TOOL_RESULT' && chunk.id === toolCall.id);
+  if (!response?.id || !response.name) {
+    return undefined;
+  }
+
+  return {
+    id: response.id,
+    name: response.name,
+    result: response.result,
+  };
 }

@@ -1,13 +1,16 @@
 package com.alibaba.himarket.service.hichat.support;
 
-import io.agentscope.core.ReActAgent;
-import io.agentscope.core.agent.Event;
-import io.agentscope.core.agent.EventType;
-import io.agentscope.core.agent.StreamOptions;
-import io.agentscope.core.memory.Memory;
+import io.agentscope.core.agent.RuntimeContext;
+import io.agentscope.core.event.AgentEvent;
 import io.agentscope.core.message.Msg;
+import io.agentscope.core.permission.PermissionMode;
+import io.agentscope.core.state.AgentState;
+import io.agentscope.core.state.AgentStateStore;
+import io.agentscope.harness.agent.HarnessAgent;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -18,11 +21,14 @@ import reactor.core.publisher.Flux;
 @Builder
 public class ChatBot {
 
-    private static final int MAX_MEMORY_SIZE = 30;
+    private static final String AGENT_STATE_KEY = "agent_state";
+    private static final int MAX_CONTEXT_MESSAGES = 30;
     private static final long DEGRADED_TTL_MS = 2 * 60 * 1000;
 
-    private final ReActAgent agent;
+    private final HarnessAgent agent;
     private final Map<String, ToolMeta> toolMetas;
+
+    @Builder.Default private List<String> activeToolGroups = List.of();
 
     /**
      * Whether this ChatBot is in degraded mode (some MCP tools failed to initialize)
@@ -34,34 +40,84 @@ public class ChatBot {
      */
     @Builder.Default private long createTime = System.currentTimeMillis();
 
-    public Flux<Event> chat(Msg userMsg) {
-        // Truncate memory before adding new messages
-        truncateMemory();
-
-        StreamOptions streamOptions =
-                StreamOptions.builder()
-                        .eventTypes(EventType.ALL)
-                        .incremental(true)
-                        .includeReasoningChunk(true)
-                        // Exclude complete result to avoid duplication
-                        .includeReasoningResult(true)
+    public Flux<AgentEvent> chat(InvokeModelParam param) {
+        AgentStateStore stateStore =
+                Objects.requireNonNull(agent.getStateStore(), "ChatBot requires AgentStateStore");
+        RuntimeContext runtimeContext =
+                RuntimeContext.builder()
+                        .userId(param.getUserId())
+                        .sessionId(param.getSessionId())
                         .build();
 
-        return agent.stream(userMsg, streamOptions);
+        if (param.isRebuildMemory()) {
+            stateStore.delete(param.getUserId(), param.getSessionId());
+        }
+
+        List<Msg> inputMessages = buildInputMessages(param);
+
+        syncMcpState(param, stateStore);
+
+        return agent.streamEvents(inputMessages, runtimeContext);
     }
 
-    /**
-     * Truncate memory if it exceeds maximum size. Remove the oldest message.
-     */
-    private void truncateMemory() {
-        Memory memory = agent.getMemory();
-        List<Msg> messages = memory.getMessages();
-
-        if (messages.size() > MAX_MEMORY_SIZE) {
-            // Remove the oldest message
-            messages.remove(0);
-            log.debug("Memory overflow, removed oldest message, currentSize={}", messages.size());
+    private void syncMcpState(InvokeModelParam param, AgentStateStore stateStore) {
+        if (activeToolGroups == null || activeToolGroups.isEmpty()) {
+            return;
         }
+
+        List<String> groups = List.copyOf(activeToolGroups);
+        // AgentScope resolves visible tools and permission mode from AgentState at call startup.
+        AgentState state =
+                stateStore
+                        .get(
+                                param.getUserId(),
+                                param.getSessionId(),
+                                AGENT_STATE_KEY,
+                                AgentState.class)
+                        .orElse(
+                                AgentState.builder()
+                                        .userId(param.getUserId())
+                                        .sessionId(param.getSessionId())
+                                        .build());
+
+        boolean changed = false;
+        if (!groups.equals(state.getToolContext().getActivatedGroups())) {
+            state.getToolContext().setActivatedGroups(groups);
+            changed = true;
+        }
+        if (state.getPermissionContext().getMode() != PermissionMode.BYPASS) {
+            state.setPermissionContext(
+                    state.getPermissionContext().withMode(PermissionMode.BYPASS));
+            changed = true;
+        }
+        if (!changed) {
+            return;
+        }
+
+        stateStore.save(param.getUserId(), param.getSessionId(), AGENT_STATE_KEY, state);
+        log.debug(
+                "Synced MCP runtime state to AgentState, sessionId={}, groupCount={},"
+                        + " permissionMode={}",
+                param.getSessionId(),
+                groups.size(),
+                PermissionMode.BYPASS);
+    }
+
+    private List<Msg> buildInputMessages(InvokeModelParam param) {
+        List<Msg> historyMessages = param.getHistoryMessages();
+        if (historyMessages == null || historyMessages.isEmpty()) {
+            return List.of(param.getUserMessage());
+        }
+
+        int startIndex =
+                historyMessages.size() > MAX_CONTEXT_MESSAGES
+                        ? historyMessages.size() - MAX_CONTEXT_MESSAGES
+                        : 0;
+
+        List<Msg> inputMessages =
+                new ArrayList<>(historyMessages.subList(startIndex, historyMessages.size()));
+        inputMessages.add(param.getUserMessage());
+        return inputMessages;
     }
 
     /**

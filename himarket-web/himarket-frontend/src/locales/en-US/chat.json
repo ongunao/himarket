@@ -3,10 +3,8 @@
     "selectModelFirst": "Please select a model first"
   },
   "area": {
-    "multiModelCompare": "Compare models",
-    "addCompareModel": "Add model to compare",
     "welcomePrefix": "Welcome to",
-    "emptyTitle": "Start with"
+    "emptyTitle": "Welcome to"
   },
   "input": {
     "imageUploadHint": "Up to 5 MB, 10 files max",
@@ -20,8 +18,11 @@
     "uploadFailed": "Upload failed",
     "uploadError": "Upload error",
     "dropArea": "Drop attachments here",
+    "imageEditPlaceholder": "Describe how you want to change this image...",
+    "cancelImageEdit": "Cancel image editing",
     "mcpExecuting": "MCP tool is running...",
     "placeholder": "Ask a question...",
+    "thinking": "Thinking",
     "webSearch": "Web"
   },
   "mcp": {
@@ -38,12 +39,13 @@
     "noDescription": "No description",
     "add": "Add",
     "remove": "Remove",
+    "subscribe": "Subscribe",
     "quickSubscribe": "Quick subscribe"
   },
   "mcpModal": {
-    "title": "Select MCP Server",
+    "title": "Select MCP servers",
     "description": "Choose MCP Servers for this chat. Filter by category or search by name.",
-    "enabled": "MCP: Enabled",
+    "enabled": "Enabled",
     "scope": "Categories",
     "availableServers": "Available servers",
     "addedServers": "Added servers",
@@ -51,9 +53,9 @@
     "addedCount": "Added {{count}} / 10",
     "serverCount": "{{count}} servers",
     "removeAll": "Remove all",
-    "noServers": "No MCP Server...",
-    "addedEmptyHint": "Choose and add the servers you need from all MCP Servers",
-    "viewAll": "View all servers"
+    "noServers": "No matching MCP services",
+    "noAddedServers": "No MCP services added",
+    "viewAll": "View all"
   },
   "toolCall": {
     "executing": "Running tool...",
@@ -69,6 +71,7 @@
     "totalTime": "Total time",
     "inputTokens": "Input tokens",
     "outputTokens": "Output tokens",
+    "thinking": "Thinking process",
     "copy": "Copy",
     "regenerate": "Regenerate",
     "previousVersion": "Previous version",
@@ -80,28 +83,14 @@
     "loadHistoryFailed": "Failed to load chat history"
   },
   "modelSelector": {
+    "title": "Select model",
+    "previousCategories": "View previous categories",
+    "nextCategories": "View more categories",
     "searchPlaceholder": "Search models...",
     "loadingCategories": "Loading categories...",
     "loading": "Loading...",
     "noModels": "No models",
-    "noModelsHint": "Configure a model in Admin before using it in HiChat",
     "selectModel": "Select model"
-  },
-  "multiModel": {
-    "cancel": "Cancel",
-    "startCompare": "Start comparison",
-    "title": "Select Models to Compare",
-    "baseModels": "Current comparison",
-    "selectedModels": "Selected models",
-    "currentModel": "Current model",
-    "selectOne": "Select 1 more model (selected {{current}}/1)",
-    "selectMore": "Select 1-{{max}} more models (selected {{current}}/{{max}})",
-    "selectMoreDefault": "Select 1-2 more models (selected {{current}}/2)",
-    "selectedCount": "Selected {{current}} / {{max}}",
-    "loadingModels": "Loading model list...",
-    "current": "Current",
-    "noDescription": "No description",
-    "noAvailableModels": "No available models"
   },
   "suggestions": {
     "title": "Suggested questions",
@@ -137,6 +126,7 @@
     "languageModel": "Language model",
     "textToImage": "Text to image",
     "textToVideo": "Text to video",
+    "voiceGeneration": "Voice generation",
     "comingSoon": "Coming soon",
     "noHistory": "No chat history",
     "today": "Today",

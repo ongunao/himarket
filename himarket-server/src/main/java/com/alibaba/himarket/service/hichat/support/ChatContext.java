@@ -1,33 +1,40 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 package com.alibaba.himarket.service.hichat.support;
 
 import com.alibaba.himarket.dto.result.chat.LlmInvokeResult;
 import com.alibaba.himarket.support.chat.ChatUsage;
-import com.alibaba.himarket.support.chat.ToolCallInfo;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import lombok.Data;
+import java.util.Objects;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@Data
 public class ChatContext {
 
     /**
      * Chat ID for tracking
      */
-    private final String chatId;
+    @Getter private final String chatId;
 
-    /**
-     * Answer content
-     */
-    private final StringBuilder answerContent = new StringBuilder();
+    private final ChatContent content = new ChatContent();
 
-    /**
-     * Chat usage (tokens)
-     */
-    private ChatUsage usage;
+    @Getter private final ChatUsage usage = ChatUsage.builder().build();
 
     /**
      * Success flag
@@ -43,16 +50,6 @@ public class ChatContext {
      * First byte timeout (time to first byte in milliseconds)
      */
     private Long firstByteTimeout;
-
-    /**
-     * Tool name to tool metadata mapping
-     */
-    private Map<String, ToolMeta> toolMetas;
-
-    /**
-     * Tool call information map (keyed by tool call ID for matching with results)
-     */
-    private final Map<String, ToolCallInfo> toolCallMap = new LinkedHashMap<>();
 
     public ChatContext(String chatId) {
         this.chatId = chatId;
@@ -81,14 +78,11 @@ public class ChatContext {
         }
 
         long elapsedTime = System.currentTimeMillis() - startTime;
+        usage.setElapsedTime(elapsedTime);
+        log.debug("Chat completed, elapsedMillis={}", elapsedTime);
 
-        if (usage != null) {
-            usage.setElapsedTime(elapsedTime);
-            log.debug("Chat completed, elapsedMillis={}", elapsedTime);
-
-            if (firstByteTimeout != null) {
-                usage.setFirstByteTimeout(firstByteTimeout);
-            }
+        if (firstByteTimeout != null) {
+            usage.setFirstByteTimeout(firstByteTimeout);
         }
     }
 
@@ -105,98 +99,27 @@ public class ChatContext {
         switch (event.getType()) {
             case ASSISTANT:
             case THINKING:
-                // Accumulate assistant response and thinking content
-                if (event.getContent() != null) {
-                    // Record first byte arrival time
-                    recordFirstByteTimeout();
-                    answerContent.append(event.getContent());
-                }
-                break;
-
+            case IMAGE:
             case TOOL_CALL:
-                // Collect tool call information
-                if (event.getContent() instanceof ChatEvent.ToolCallContent) {
-                    ChatEvent.ToolCallContent tc = (ChatEvent.ToolCallContent) event.getContent();
-                    ToolCallInfo toolCallInfo =
-                            ToolCallInfo.builder()
-                                    .id(tc.getId())
-                                    .name(tc.getName())
-                                    .arguments(tc.getArguments())
-                                    .mcpServerName(tc.getMcpServerName())
-                                    .build();
-                    toolCallMap.put(tc.getId(), toolCallInfo);
-                }
-                break;
-
             case TOOL_RESULT:
-                // Update tool call with result
-                if (event.getContent() instanceof ChatEvent.ToolResultContent) {
-                    ChatEvent.ToolResultContent tr =
-                            (ChatEvent.ToolResultContent) event.getContent();
-                    ToolCallInfo toolCallInfo = toolCallMap.get(tr.getId());
-                    if (toolCallInfo != null) {
-                        toolCallInfo.setResult(tr.getResult());
-                    }
+                if (event.getContent() != null) {
+                    recordFirstByteTimeout();
+                    content.collect(event);
                 }
-                break;
-
-            case DONE:
                 break;
 
             case ERROR:
-                // Mark as failed
                 this.success = false;
                 if (event.getMessage() != null) {
-                    answerContent
-                            .append("\n[Request failed. Reason: ")
-                            .append(event.getMessage())
-                            .append("]");
+                    appendAnswer("\n[Request failed. Reason: " + event.getMessage() + "]");
                 }
                 break;
 
+            case START:
+            case DONE:
             default:
-                // Ignore other event types (START)
                 break;
         }
-    }
-
-    /**
-     * Append additional content to answer
-     *
-     * @param content Content to append
-     */
-    public void appendAnswer(String content) {
-        if (content != null) {
-            answerContent.append(content);
-        }
-    }
-
-    /**
-     * Get complete answer content
-     *
-     * @return Complete answer as string
-     */
-    public String getAnswer() {
-        return answerContent.toString();
-    }
-
-    /**
-     * Get tool metadata for a given tool name
-     *
-     * @param toolName tool name
-     * @return ToolMeta, or null if not found
-     */
-    public ToolMeta getToolMeta(String toolName) {
-        return toolMetas != null ? toolMetas.get(toolName) : null;
-    }
-
-    /**
-     * Get collected tool calls as a list
-     *
-     * @return List of tool call info, or null if empty
-     */
-    public List<ToolCallInfo> getToolCalls() {
-        return toolCallMap.isEmpty() ? null : new ArrayList<>(toolCallMap.values());
     }
 
     /**
@@ -207,13 +130,28 @@ public class ChatContext {
     public LlmInvokeResult toResult() {
         return LlmInvokeResult.builder()
                 .success(success)
-                .answer(getAnswer())
+                .answer(content.getAnswer())
+                .messageChunks(content.getMessageChunks())
                 .usage(usage)
-                .toolCalls(getToolCalls())
                 .build();
+    }
+
+    public void appendAnswer(String content) {
+        this.content.appendAnswer(content);
     }
 
     public void fail() {
         this.success = false;
+    }
+
+    public boolean hasUsage() {
+        return usage.getTotalTokens() != null;
+    }
+
+    public void accumulateTokenUsage(int inputTokens, int outputTokens) {
+        usage.setInputTokens(Objects.requireNonNullElse(usage.getInputTokens(), 0) + inputTokens);
+        usage.setOutputTokens(
+                Objects.requireNonNullElse(usage.getOutputTokens(), 0) + outputTokens);
+        usage.setTotalTokens(usage.getInputTokens() + usage.getOutputTokens());
     }
 }

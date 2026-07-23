@@ -16,18 +16,20 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package com.alibaba.himarket.service.hichat.support;
 
-package com.alibaba.himarket.converter;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.alibaba.himarket.support.chat.ToolCallInfo;
-import jakarta.persistence.Converter;
-import java.util.List;
+import org.junit.jupiter.api.Test;
 
-@Converter(autoApply = true)
-public class ListToolCallInfoConverter extends JsonConverter<List<ToolCallInfo>> {
+class GeneratedImageDownloaderTest {
 
-    @SuppressWarnings("unchecked")
-    protected ListToolCallInfoConverter() {
-        super((Class<List<ToolCallInfo>>) (Class<?>) List.class, ToolCallInfo.class);
+    @Test
+    void shouldRejectPrivateImageAddress() {
+        GeneratedImageDownloader downloader = new GeneratedImageDownloader();
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> downloader.download("http://127.0.0.1/image.png"));
     }
 }

@@ -20,15 +20,11 @@
 package com.alibaba.himarket.dto.result.chat;
 
 import com.alibaba.himarket.support.chat.ChatUsage;
-import com.alibaba.himarket.support.chat.ToolCallInfo;
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @Data
 @Builder
 @NoArgsConstructor
@@ -43,12 +39,12 @@ public class LlmInvokeResult {
     private String answer;
 
     /**
+     * Ordered message chunks in HiMarket display JSON format
+     */
+    private String messageChunks;
+
+    /**
      * Usage, exists only when success
      */
     private ChatUsage usage;
-
-    /**
-     * Tool calls (tool call and result pairs)
-     */
-    private List<ToolCallInfo> toolCalls;
 }

@@ -21,21 +21,21 @@ package com.alibaba.himarket.service.hichat.manager;
 import com.alibaba.himarket.core.event.McpClientRemovedEvent;
 import com.alibaba.himarket.core.utils.CacheUtil;
 import com.alibaba.himarket.dto.result.product.ProductResult;
+import com.alibaba.himarket.service.hichat.memory.ChatMemoryAgentStateStore;
 import com.alibaba.himarket.service.hichat.support.ChatBot;
 import com.alibaba.himarket.service.hichat.support.LlmChatRequest;
 import com.alibaba.himarket.service.hichat.support.ToolMeta;
 import com.alibaba.himarket.support.chat.mcp.McpTransportConfig;
 import com.alibaba.himarket.support.common.Strings;
 import com.github.benmanes.caffeine.cache.Cache;
-import io.agentscope.core.ReActAgent;
-import io.agentscope.core.memory.InMemoryMemory;
-import io.agentscope.core.memory.Memory;
-import io.agentscope.core.message.Msg;
 import io.agentscope.core.model.Model;
 import io.agentscope.core.tool.ToolGroup;
 import io.agentscope.core.tool.Toolkit;
 import io.agentscope.core.tool.mcp.McpClientWrapper;
 import io.agentscope.core.tool.mcp.McpTool;
+import io.agentscope.harness.agent.HarnessAgent;
+import io.agentscope.harness.agent.memory.MemoryConfig;
+import io.agentscope.harness.agent.memory.compaction.CompactionConfig;
 import io.modelcontextprotocol.spec.McpSchema;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -59,7 +59,13 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class ChatBotManager {
 
+    private static final int COMPACTION_TRIGGER_MESSAGES = 40;
+    private static final int COMPACTION_KEEP_MESSAGES = 20;
+
     private final ToolManager toolManager;
+
+    private final ChatMemoryAgentStateStore chatMemoryAgentStateStore;
+
     private final Cache<String, ChatBot> chatBotCache = CacheUtil.newLRUCache(10 * 60);
 
     /**
@@ -152,20 +158,38 @@ public class ChatBotManager {
 
         // Build tool metadata mapping
         Map<String, ToolMeta> toolMetas = buildToolMetas(toolkit);
+        List<String> activeToolGroups = List.copyOf(toolkit.getActiveGroups());
 
-        // Initialize memory
-        Memory memory = createMemory(request.getHistoryMessages());
         String systemPrompt = buildSystemPrompt(product.getName());
 
-        // Build agent for react chat
-        ReActAgent agent =
-                ReActAgent.builder()
+        HarnessAgent agent =
+                HarnessAgent.builder()
+                        .agentId("hichat-" + product.getProductId())
                         .name(product.getName())
                         .sysPrompt(systemPrompt)
                         .model(model)
                         .toolkit(toolkit)
-                        .memory(memory)
+                        .stateStore(chatMemoryAgentStateStore)
+                        .defaultSessionId(request.getSessionId())
                         .maxIters(10)
+                        .enableAgentTracingLog(false)
+                        .disableWorkspaceContext()
+                        .disableAtPathExpansion()
+                        .disableFilesystemTools()
+                        .disableShellTool()
+                        .disableSubagents()
+                        .disableDynamicSubagents()
+                        .disableDynamicSkills()
+                        .disableDefaultWorkspaceSkills()
+                        .disableMemoryTools()
+                        .disableMemoryHooks()
+                        .disableToolsConfig()
+                        .disableToolResultEviction()
+                        .memory(
+                                MemoryConfig.builder()
+                                        .flushTrigger(MemoryConfig.FlushTrigger.never())
+                                        .build())
+                        .compaction(buildCompactionConfig())
                         .build();
 
         // Determine if ChatBot is in degraded mode
@@ -174,14 +198,32 @@ public class ChatBotManager {
         long totalTime = System.currentTimeMillis() - startTime;
         log.info(
                 "ChatBot created, sessionId={}, succeededMcpCount={}, expectedMcpCount={},"
-                        + " degraded={}, elapsedMillis={}",
+                        + " toolGroupCount={}, toolCount={}, degraded={}, elapsedMillis={}",
                 request.getSessionId(),
                 actualSuccessCount,
                 expectedMcpCount,
+                activeToolGroups.size(),
+                toolMetas.size(),
                 degraded,
                 totalTime);
 
-        return ChatBot.builder().agent(agent).toolMetas(toolMetas).degraded(degraded).build();
+        return ChatBot.builder()
+                .agent(agent)
+                .toolMetas(toolMetas)
+                .activeToolGroups(activeToolGroups)
+                .degraded(degraded)
+                .build();
+    }
+
+    private static CompactionConfig buildCompactionConfig() {
+        return CompactionConfig.builder()
+                .triggerMessages(COMPACTION_TRIGGER_MESSAGES)
+                .keepMessages(COMPACTION_KEEP_MESSAGES)
+                .keepTokens(0)
+                .flushBeforeCompact(false)
+                .offloadBeforeCompact(false)
+                .truncateArgs(CompactionConfig.TruncateArgsConfig.builder().build())
+                .build();
     }
 
     /**
@@ -305,12 +347,23 @@ public class ChatBotManager {
             // Pass null since we have no preset parameters here.
             Map<String, Object> parameters =
                     McpTool.convertMcpSchemaToParameters(tool.inputSchema(), null);
+            Map<String, Object> outputSchema =
+                    tool.outputSchema() != null
+                            ? new ConcurrentHashMap<>(tool.outputSchema())
+                            : null;
+            boolean readOnly =
+                    tool.annotations() != null
+                            && Boolean.TRUE.equals(tool.annotations().readOnlyHint());
             McpTool mcpTool =
                     new McpTool(
                             tool.name(),
                             tool.description() != null ? tool.description() : "",
                             parameters,
-                            client);
+                            outputSchema,
+                            client,
+                            null,
+                            client.getName(),
+                            readOnly);
 
             // Use MCP server name as groupName
             String groupName = client.getName();
@@ -332,37 +385,6 @@ public class ChatBotManager {
                     e.getMessage(),
                     e);
         }
-    }
-
-    /**
-     * Create memory with history messages
-     *
-     * @param historyMessages list of historical messages
-     * @return memory instance with loaded messages
-     */
-    private Memory createMemory(List<Msg> historyMessages) {
-        Memory memory = new InMemoryMemory();
-
-        if (!CollectionUtils.isEmpty(historyMessages)) {
-            // Limit initial memory to 20 messages
-            int maxInitMessages = 20;
-            List<Msg> messagesToLoad = historyMessages;
-
-            if (historyMessages.size() > maxInitMessages) {
-                int startIndex = historyMessages.size() - maxInitMessages;
-                messagesToLoad = historyMessages.subList(startIndex, historyMessages.size());
-                log.info(
-                        "Truncated history for initialization, originalMessageCount={},"
-                                + " retainedMessageCount={}",
-                        historyMessages.size(),
-                        maxInitMessages);
-            }
-
-            messagesToLoad.forEach(memory::addMessage);
-            log.debug("Initialized memory, messageCount={}", messagesToLoad.size());
-        }
-
-        return memory;
     }
 
     /**
@@ -455,11 +477,14 @@ public class ChatBotManager {
     private String buildCacheKey(LlmChatRequest request) {
         StringBuilder sb = new StringBuilder();
 
-        // Session ID (for Memory isolation)
+        // Session ID (for ChatBot isolation)
         sb.append("session:").append(request.getSessionId()).append("|");
 
         // Product ID (for Product isolation)
         sb.append("product:").append(request.getProduct().getProductId()).append("|");
+
+        // Thinking mode changes the model instance configuration.
+        sb.append("thinking:").append(request.isEnableThinking()).append("|");
 
         // Model URL (scheme + host + port + path)
         if (request.getUri() != null) {
@@ -533,16 +558,16 @@ public class ChatBotManager {
             sb.append("}|");
         }
 
-        // MCP Tool URLs (sorted)
+        // MCP tool cache keys (sorted)
         sb.append("mcp:");
         if (!CollectionUtils.isEmpty(request.getMcpConfigs())) {
-            String mcpUrls =
+            String mcpKeys =
                     request.getMcpConfigs().stream()
-                            .map(McpTransportConfig::getUrl)
+                            .map(toolManager::buildCacheKey)
                             .filter(Strings::isNotBlank)
                             .sorted()
                             .collect(Collectors.joining(","));
-            sb.append(mcpUrls);
+            sb.append(mcpKeys);
         } else {
             sb.append("none");
         }

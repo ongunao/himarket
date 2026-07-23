@@ -6,13 +6,13 @@ import {
   CheckCircleFilled,
   ClockCircleOutlined,
 } from '@ant-design/icons';
-import { Button, message, Modal, Table, Popconfirm, Select, Input } from 'antd';
+import { Button, Input, message, Modal, Popconfirm, Select, Table, Tooltip } from 'antd';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import request from '../../lib/request';
 import { ProductTypeMap } from '../../lib/statusUtils';
-import { modelStyles } from '../../lib/styles';
+import { portalModalStyles } from '../../lib/styles';
 import { formatDateTime } from '../../lib/utils';
 
 import type { ISubscription } from '../../lib/apis';
@@ -147,7 +147,7 @@ export function SubscriptionManager({
             ) : (
               <ClockCircleOutlined className="mr-2 text-orange-500" style={{ fontSize: '10px' }} />
             )}
-            <span className="text-gray-900">
+            <span className="text-[#505B6E]">
               {status === 'APPROVED'
                 ? t('subscription.approved')
                 : status === 'PENDING'
@@ -172,7 +172,13 @@ export function SubscriptionManager({
           onConfirm={() => handleUnsubscribe(record.productId)}
           title={t('subscription.unsubscribeConfirm')}
         >
-          <Button className="rounded-lg" icon={<DeleteOutlined className="text-red-500" />} />
+          <Button
+            aria-label={t('subscription.unsubscribeAction')}
+            className="h-8 w-8 rounded-[7px] border-0 p-0 text-[#E0525E] shadow-none hover:!bg-red-50 hover:!text-[#D94350]"
+            danger
+            icon={<DeleteOutlined />}
+            type="text"
+          />
         </Popconfirm>
       ),
       title: t('subscription.action'),
@@ -183,11 +189,11 @@ export function SubscriptionManager({
 
   return (
     <>
-      <div className="bg-white">
-        <div className="mb-4 flex justify-between">
-          <div className="flex items-center gap-4">
+      <div className="consumer-subscription-manager">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
             <Button
-              className="rounded-lg"
+              className="h-9 w-fit rounded-[8px] border-none px-3.5 text-sm font-medium shadow-none"
               icon={<PlusOutlined />}
               onClick={openProductModal}
               type="primary"
@@ -196,23 +202,27 @@ export function SubscriptionManager({
             </Button>
             <Input
               allowClear
-              className="w-80 rounded-lg"
+              className="h-10 w-full max-w-[360px] rounded-[9px] border-[#E0E2EA] bg-white/[0.72] shadow-none hover:border-[#D4D7E1] focus-within:border-colorPrimary/25 focus-within:bg-white"
               onChange={handleSearchChange}
               onClear={handleClearSearch}
               onPressEnter={handleSearch}
               placeholder={t('subscription.searchPlaceholder')}
               prefix={<SearchOutlined className="text-gray-400" />}
-              style={{
-                backdropFilter: 'blur(10px)',
-                backgroundColor: 'rgba(255, 255, 255, 0.6)',
-              }}
               value={searchInput}
             />
           </div>
-          <Button className="rounded-lg" icon={<ReloadOutlined />} onClick={onRefresh} />
+          <Tooltip title={t('refresh')}>
+            <Button
+              aria-label={t('refresh')}
+              className="h-10 w-10 rounded-[9px] border-[#E1E3EB] bg-white/55 text-[#697386] shadow-none hover:!border-[#D4D7E1] hover:!bg-white/90 hover:!text-[#4F596B]"
+              icon={<ReloadOutlined />}
+              onClick={onRefresh}
+            />
+          </Tooltip>
         </div>
-        <div className="overflow-hidden rounded-lg border border-[#e5e5e5]">
+        <div className="overflow-hidden rounded-[10px] border border-[#E1E3EB] bg-white/35">
           <Table
+            className="consumer-detail-table"
             columns={subscriptionColumns}
             dataSource={safeSubscriptions}
             loading={loading}
@@ -225,45 +235,31 @@ export function SubscriptionManager({
       </div>
 
       <Modal
-        footer={
-          <div className="flex justify-end space-x-2">
-            <Button
-              disabled={subscribeLoading}
-              onClick={() => {
-                if (!subscribeLoading) {
-                  setProductModalVisible(false);
-                  setSelectedProduct('');
-                }
-              }}
-            >
-              {t('common:cancel')}
-            </Button>
-            <Button
-              disabled={!selectedProduct}
-              loading={subscribeLoading}
-              onClick={handleSubscribeProducts}
-              type="primary"
-            >
-              {t('subscription.confirmSubscribe')}
-            </Button>
-          </div>
-        }
+        cancelButtonProps={{ disabled: subscribeLoading }}
+        cancelText={t('common:cancel')}
+        centered
+        className="portal-modal"
+        confirmLoading={subscribeLoading}
+        okButtonProps={{ disabled: !selectedProduct }}
+        okText={t('subscription.confirmSubscribe')}
         onCancel={() => {
           if (!subscribeLoading) {
             setProductModalVisible(false);
             setSelectedProduct('');
           }
         }}
+        onOk={handleSubscribeProducts}
         open={productModalVisible}
-        styles={modelStyles}
+        styles={portalModalStyles}
         title={t('subscription.selectTitle')}
-        width={500}
+        width={460}
       >
-        <div>
-          <div className="text-sm text-gray-700 mb-3 font-medium">
+        <div className="pb-1">
+          <div className="mb-2 text-xs font-medium text-[#697386]">
             {t('subscription.selectLabel')}
           </div>
           <Select
+            className="w-full"
             filterOption={(input, option) => {
               const product = filteredProducts.find((p) => p.productId === option?.value);
               if (!product) return false;
@@ -279,7 +275,6 @@ export function SubscriptionManager({
             onChange={setSelectedProduct}
             placeholder={t('subscription.selectPlaceholder')}
             showSearch={true}
-            style={{ width: '100%' }}
             value={selectedProduct}
           >
             {filteredProducts.map((product) => (

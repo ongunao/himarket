@@ -20,6 +20,7 @@
 package com.alibaba.himarket.core.exception;
 
 import io.agentscope.core.model.ModelException;
+import io.agentscope.extensions.model.openai.exception.OpenAIException;
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 import lombok.Getter;
@@ -72,7 +73,9 @@ public enum ChatError {
         }
 
         // HTTP errors from model (401, 403, 500, etc.)
-        if (error instanceof WebClientResponseException || error instanceof ModelException) {
+        if (error instanceof WebClientResponseException
+                || error instanceof ModelException
+                || error instanceof OpenAIException) {
             return REQUEST_ERROR;
         }
 

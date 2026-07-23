@@ -26,6 +26,11 @@ public class LlmChatRequest {
     private String sessionId;
 
     /**
+     * User ID
+     */
+    private String userId;
+
+    /**
      * Model product
      */
     private ProductResult product;
@@ -39,6 +44,21 @@ public class LlmChatRequest {
      * History messages for initializing memory
      */
     private List<Msg> historyMessages;
+
+    /**
+     * If need rebuild memory from persisted chat history before this invocation.
+     */
+    private boolean rebuildMemory;
+
+    /**
+     * Whether thinking is enabled for this invocation
+     */
+    private boolean enableThinking;
+
+    /**
+     * Whether web search is enabled for this invocation
+     */
+    private boolean enableWebSearch;
 
     /**
      * URI, use this uri to request model

@@ -1,39 +1,16 @@
 {
   "chat": {
-    "subtitle": "Chat with AI models and explore new possibilities",
+    "subtitle": "Choose a model and begin a natural, continuous conversation",
     "cta": "Sign in to start chatting",
-    "features": {
-      "modelConversation": {
-        "title": "AI multi-model chat",
-        "desc": "Use mainstream AI models in one conversational experience"
-      },
-      "modelCompare": {
-        "title": "Model comparison",
-        "desc": "Compare answers from multiple models and choose the best result"
-      },
-      "mcpIntegration": {
-        "title": "MCP tool integration",
-        "desc": "Connect MCP services so AI can call external tools"
-      }
-    }
+    "placeholder": "Sign in to send a message to a model...",
+    "loginHint": "Sign in to choose models and use MCP tools"
   },
   "coding": {
-    "subtitle": "An AI coding assistant that turns ideas into working code",
+    "subtitle": "Describe a goal and let the Agent build, run, and refine it in a sandbox",
     "cta": "Sign in to start coding",
-    "features": {
-      "aiCoding": {
-        "title": "AI-assisted coding",
-        "desc": "Describe what you need in natural language and let AI draft the solution"
-      },
-      "sandbox": {
-        "title": "Sandbox execution",
-        "desc": "Run code safely in a sandbox and inspect results in real time"
-      },
-      "interactive": {
-        "title": "Interactive iteration",
-        "desc": "Refine your project through an ongoing conversation with AI"
-      }
-    }
+    "placeholder": "Sign in and describe what you want to build...",
+    "loginHint": "Sign in to choose models, Skills, and MCP tools",
+    "workspace": "Sandbox workspace"
   },
   "register": "Create an account"
 }

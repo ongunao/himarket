@@ -26,7 +26,6 @@
 
 .coding-session-menu-dropdown .ant-dropdown-menu-item:hover {
   background: rgba(255, 255, 255, 0.5) !important;
-  transform: scale(1.02);
 }
 
 .coding-session-menu-dropdown .ant-dropdown-menu-item-danger {

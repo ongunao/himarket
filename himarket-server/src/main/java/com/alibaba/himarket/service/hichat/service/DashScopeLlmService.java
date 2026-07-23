@@ -26,9 +26,10 @@ import com.alibaba.himarket.service.hichat.support.InvokeModelParam;
 import com.alibaba.himarket.service.hichat.support.LlmChatRequest;
 import com.alibaba.himarket.support.enums.AIProtocol;
 import com.alibaba.himarket.support.product.ModelFeature;
-import io.agentscope.core.model.DashScopeChatModel;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.model.Model;
+import io.agentscope.extensions.model.dashscope.DashScopeChatModel;
+import io.agentscope.extensions.model.dashscope.DashScopeHttpClient;
 import java.net.URI;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -45,47 +46,87 @@ public class DashScopeLlmService extends AbstractLlmService {
     @Override
     protected LlmChatRequest composeRequest(InvokeModelParam param) {
         LlmChatRequest request = super.composeRequest(param);
-        ProductResult product = param.getProduct();
-
-        if (product.getModelConfig() != null) {
-            URI uri = getUri(product.getModelConfig(), request.getGatewayUris());
-            request.setUri(uri);
-        }
+        request.setUri(resolveBaseUri(request));
 
         return request;
     }
 
     @Override
     public Model newChatModel(LlmChatRequest request) {
-        // Build GenerateOptions with additional parameters
-        GenerateOptions.Builder optionsBuilder =
-                GenerateOptions.builder()
+        ModelFeature modelFeature = getOrDefaultModelFeature(request.getProduct());
+        GenerateOptions options =
+                GenerateOptions.builder().stream(true)
+                        .temperature(modelFeature.getTemperature())
+                        .maxTokens(modelFeature.getMaxTokens())
                         .additionalHeaders(request.getHeaders())
                         .additionalQueryParams(request.getQueryParams())
-                        .additionalBodyParams(request.getBodyParams());
+                        .additionalBodyParams(request.getBodyParams())
+                        .build();
 
-        GenerateOptions options = optionsBuilder.build();
-
-        ModelFeature modelFeature = getOrDefaultModelFeature(request.getProduct());
-
-        // TODO: Configure the DashScope request URI.
-
-        // Build DashScopeChatModel using Builder pattern
         return DashScopeChatModel.builder()
+                .baseUrl(request.getUri().toString())
                 .apiKey(request.getApiKey())
                 .modelName(modelFeature.getModel())
-                .enableSearch(modelFeature.getWebSearch())
+                .enableThinking(
+                        Boolean.TRUE.equals(modelFeature.getEnableThinking())
+                                ? request.isEnableThinking()
+                                : null)
+                .enableSearch(
+                        Boolean.TRUE.equals(modelFeature.getWebSearch())
+                                ? request.isEnableWebSearch()
+                                : null)
                 .stream(true)
                 .defaultOptions(options)
                 .build();
     }
 
-    private URI getUri(ModelConfigResult modelConfig, List<URI> gatewayUris) {
-        return null;
+    private URI resolveBaseUri(LlmChatRequest request) {
+        ProductResult product = request.getProduct();
+        ModelConfigResult modelConfig = product != null ? product.getModelConfig() : null;
+        if (modelConfig == null) {
+            throw new IllegalStateException("The DashScope model does not provide route config");
+        }
+
+        String modelName = getOrDefaultModelFeature(product).getModel();
+        String endpoint =
+                DashScopeHttpClient.isMultimodalModel(modelName)
+                        ? DashScopeHttpClient.MULTIMODAL_GENERATION_ENDPOINT
+                        : DashScopeHttpClient.TEXT_GENERATION_ENDPOINT;
+        URI uri =
+                buildUri(
+                        modelConfig,
+                        request.getGatewayUris(),
+                        endpoint,
+                        (pathValue, pathType) -> {
+                            if (pathValue == null) {
+                                throw new IllegalStateException(
+                                        "The DashScope model route path is missing");
+                            }
+                            String path =
+                                    pathValue.endsWith("/")
+                                            ? pathValue.substring(0, pathValue.length() - 1)
+                                            : pathValue;
+                            if (!path.endsWith(endpoint)) {
+                                throw new IllegalStateException(
+                                        "The DashScope model does not provide the required"
+                                                + " endpoint: "
+                                                + endpoint);
+                            }
+                            return path.substring(0, path.length() - endpoint.length());
+                        });
+        if (uri == null) {
+            throw new IllegalStateException("Failed to resolve the DashScope model route");
+        }
+        return uri;
     }
 
     @Override
     public List<AIProtocol> getProtocols() {
         return List.of(AIProtocol.DASHSCOPE);
+    }
+
+    @Override
+    public String getModelCategory() {
+        return "TEXT";
     }
 }

@@ -14,6 +14,14 @@ const PRODUCT_DETAIL_TABS_FILL_ROOT_CLASS =
   'flex min-h-0 flex-1 flex-col [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content-holder]:overflow-hidden [&_.ant-tabs-body-holder]:min-h-0 [&_.ant-tabs-body-holder]:flex-1 [&_.ant-tabs-body-holder]:overflow-hidden [&_.ant-tabs-body]:h-full [&_.ant-tabs-content]:h-full [&_.ant-tabs-tabpane]:h-full';
 const PRODUCT_DETAIL_TABS_FILL_CONTENT_CLASS = 'h-full min-h-0';
 
+const MARKET_DETAIL_TABS_CARD_CLASS =
+  'overflow-hidden rounded-[12px] border border-[#E0E5ED] bg-white/70 backdrop-blur-xl';
+
+const MARKET_DETAIL_TABS_NAV_CLASS =
+  '[&_.ant-tabs-nav]:mb-0 [&_.ant-tabs-nav]:px-4 [&_.ant-tabs-nav]:before:border-b-[#E6EAF0] [&_.ant-tabs-tab]:py-3.5';
+
+const MARKET_DETAIL_TABS_CONTENT_CLASS = 'min-w-0 p-4';
+
 function classNames(...values: Array<string | undefined>) {
   return values.filter(Boolean).join(' ');
 }
@@ -21,6 +29,7 @@ function classNames(...values: Array<string | undefined>) {
 function mergeSemanticClassNames(
   semanticClassNames: TabsProps['classNames'] | undefined,
   contentPadded: boolean,
+  contentClassName: string,
   fillHeight: boolean,
 ): TabsProps['classNames'] | undefined {
   if (!contentPadded && !fillHeight) {
@@ -34,7 +43,7 @@ function mergeSemanticClassNames(
       return {
         ...resolvedClassNames,
         content: classNames(
-          contentPadded ? PRODUCT_DETAIL_TABS_CONTENT_CLASS : undefined,
+          contentPadded ? contentClassName : undefined,
           fillHeight ? PRODUCT_DETAIL_TABS_FILL_CONTENT_CLASS : undefined,
           resolvedClassNames.content,
         ),
@@ -45,7 +54,7 @@ function mergeSemanticClassNames(
   return {
     ...semanticClassNames,
     content: classNames(
-      contentPadded ? PRODUCT_DETAIL_TABS_CONTENT_CLASS : undefined,
+      contentPadded ? contentClassName : undefined,
       fillHeight ? PRODUCT_DETAIL_TABS_FILL_CONTENT_CLASS : undefined,
       semanticClassNames?.content,
     ),
@@ -58,6 +67,7 @@ interface ProductDetailTabLabelProps {
 }
 
 interface ProductDetailTabsProps extends Omit<TabsProps, 'className' | 'size'> {
+  appearance?: 'default' | 'agent' | 'mcp' | 'model' | 'api' | 'skill' | 'worker';
   cardClassName?: string;
   contentPadded?: boolean;
   fillHeight?: boolean;
@@ -75,6 +85,7 @@ export function ProductDetailTabLabel({ children, icon }: ProductDetailTabLabelP
 }
 
 export function ProductDetailTabs({
+  appearance = 'default',
   cardClassName,
   classNames: semanticClassNames,
   contentPadded = true,
@@ -83,16 +94,32 @@ export function ProductDetailTabs({
   tabsClassName,
   ...tabsProps
 }: ProductDetailTabsProps) {
+  const isMarketAppearance = appearance !== 'default';
+  const defaultCardClassName = isMarketAppearance
+    ? MARKET_DETAIL_TABS_CARD_CLASS
+    : PRODUCT_DETAIL_TABS_CARD_CLASS;
+  const defaultTabsClassName = isMarketAppearance
+    ? MARKET_DETAIL_TABS_NAV_CLASS
+    : PRODUCT_DETAIL_TABS_NAV_CLASS;
+  const contentClassName = isMarketAppearance
+    ? MARKET_DETAIL_TABS_CONTENT_CLASS
+    : PRODUCT_DETAIL_TABS_CONTENT_CLASS;
+
   return (
-    <div className={classNames(PRODUCT_DETAIL_TABS_CARD_CLASS, cardClassName)} style={style}>
+    <div className={classNames(defaultCardClassName, cardClassName)} style={style}>
       <Tabs
         {...tabsProps}
         className={classNames(
-          PRODUCT_DETAIL_TABS_NAV_CLASS,
+          defaultTabsClassName,
           fillHeight ? PRODUCT_DETAIL_TABS_FILL_ROOT_CLASS : undefined,
           tabsClassName,
         )}
-        classNames={mergeSemanticClassNames(semanticClassNames, contentPadded, fillHeight)}
+        classNames={mergeSemanticClassNames(
+          semanticClassNames,
+          contentPadded,
+          contentClassName,
+          fillHeight,
+        )}
         size="large"
       />
     </div>

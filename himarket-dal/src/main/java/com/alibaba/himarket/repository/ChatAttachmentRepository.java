@@ -20,24 +20,48 @@
 package com.alibaba.himarket.repository;
 
 import com.alibaba.himarket.entity.ChatAttachment;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface ChatAttachmentRepository extends BaseRepository<ChatAttachment, Long> {
 
     /**
-     * Find attachment by attachment ID
+     * Find an attachment owned by a user
      *
      * @param attachmentId the attachment ID
+     * @param userId the owner user ID
      * @return the chat attachment
      */
-    Optional<ChatAttachment> findByAttachmentId(String attachmentId);
+    Optional<ChatAttachment> findByAttachmentIdAndUserId(String attachmentId, String userId);
 
     /**
-     * Find attachments by attachment IDs
+     * Find attachments owned by a user
      *
      * @param attachmentIds the list of attachment IDs
+     * @param userId the owner user ID
      * @return the list of chat attachments
      */
-    List<ChatAttachment> findByAttachmentIdIn(List<String> attachmentIds);
+    List<ChatAttachment> findByAttachmentIdInAndUserId(List<String> attachmentIds, String userId);
+
+    /**
+     * Delete expired attachments
+     *
+     * @param expiredBefore the exclusive expiration time
+     * @return the number of deleted attachments
+     */
+    @Modifying(clearAutomatically = true)
+    @Query(
+            value =
+                    """
+                    DELETE FROM chat_attachment
+                    WHERE created_at < :expiredBefore
+                    ORDER BY created_at, id
+                    LIMIT 500
+                    """,
+            nativeQuery = true)
+    int deleteExpiredAttachments(@Param("expiredBefore") LocalDateTime expiredBefore);
 }

@@ -44,6 +44,7 @@ import com.alibaba.himarket.entity.ProductRef;
 import com.alibaba.himarket.service.gateway.client.AdpAIGatewayClient;
 import com.alibaba.himarket.support.consumer.AdpAIAuthConfig;
 import com.alibaba.himarket.support.consumer.ConsumerAuthConfig;
+import com.alibaba.himarket.support.enums.AIProtocol;
 import com.alibaba.himarket.support.enums.GatewayType;
 import com.alibaba.himarket.support.enums.McpFromType;
 import com.alibaba.himarket.support.enums.ProductType;
@@ -605,7 +606,9 @@ public class AdpAIGatewayOperator extends GatewayOperator {
 
         ModelConfigResult.ModelAPIConfig apiConfig =
                 ModelConfigResult.ModelAPIConfig.builder()
-                        .aiProtocols(Collections.singletonList(mapProtocol(data.getProtocol())))
+                        .aiProtocols(
+                                Collections.singletonList(
+                                        mapProtocol(data.getProtocol(), data.getSceneType())))
                         .modelCategory(mapSceneType(data.getSceneType()))
                         .routes(buildRoutesFromAdpService(data, domains))
                         .services(buildServicesFromAdpService(data))
@@ -1768,9 +1771,14 @@ public class AdpAIGatewayOperator extends GatewayOperator {
     /**
      * Maps ADP protocol values to HiMarket AI protocol values.
      */
-    private String mapProtocol(String protocol) {
+    private String mapProtocol(String protocol, String sceneType) {
         if ("OPENAI_COMPATIBLE".equalsIgnoreCase(protocol)) {
-            return "OpenAI/V1";
+            return AIProtocol.OPENAI.getProtocol();
+        }
+        if ("DashScope".equalsIgnoreCase(protocol)) {
+            if ("IMAGE_GENERATION".equals(sceneType)) {
+                return AIProtocol.DASHSCOPE_IMAGE.getProtocol();
+            }
         }
         return protocol;
     }

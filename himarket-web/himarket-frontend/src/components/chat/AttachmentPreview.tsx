@@ -1,10 +1,19 @@
-import { CloseCircleFilled, LoadingOutlined } from '@ant-design/icons';
+import {
+  CloseCircleFilled,
+  FileImageOutlined,
+  LoadingOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons';
+import { Tooltip } from 'antd';
+import { isAxiosError } from 'axios';
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { type IAttachment, getAttachment } from '../../lib/apis';
 import { File as FileIcon } from '../icon';
 
 export type PreviewAttachment = Partial<IAttachment> & { attachmentId: string; url?: string };
+type AttachmentLoadState = 'expired' | 'failed' | 'loading' | 'ready';
 
 interface AttachmentPreviewProps {
   attachments: PreviewAttachment[];
@@ -12,6 +21,10 @@ interface AttachmentPreviewProps {
   isUploading?: boolean;
   className?: string;
   itemClassName?: string;
+}
+
+function getAttachmentLoadFailure(error: unknown): AttachmentLoadState {
+  return isAxiosError(error) && error.response?.status === 404 ? 'expired' : 'failed';
 }
 
 const AttachmentItem = ({
@@ -23,36 +36,121 @@ const AttachmentItem = ({
   onRemove?: (id: string) => void;
   itemClassName: string;
 }) => {
+  const { t } = useTranslation('common');
   const [details, setDetails] = useState<PreviewAttachment>(file);
   const [imgSrc, setImgSrc] = useState<string | undefined>(file.url);
-  const [loading, setLoading] = useState(false);
+  const [loadState, setLoadState] = useState<AttachmentLoadState>('loading');
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const { attachmentId, mimeType, name, size, type, url } = file;
 
   useEffect(() => {
-    // If metadata is missing (no type) or it's an image without source, fetch it
-    const needsFetch = !details.type || (details.type === 'IMAGE' && !imgSrc && !details.url);
+    const currentFile = { attachmentId, mimeType, name, size, type, url };
+    const needsFetch = !type || (type === 'IMAGE' && !url);
+    setDetails(currentFile);
+    setImgSrc(url);
 
-    if (needsFetch && details.attachmentId) {
-      setLoading(true);
-      getAttachment(details.attachmentId)
-        .then((res) => {
-          if (res.code === 'SUCCESS' && res.data) {
-            const data = res.data;
-            setDetails((prev) => ({ ...prev, ...data }));
-            if (data.type === 'IMAGE' && data.data) {
-              setImgSrc(`data:${data.mimeType};base64,${data.data}`);
-            }
-          }
-        })
-        .catch(console.error)
-        .finally(() => setLoading(false));
+    if (!needsFetch) {
+      setLoadState('ready');
+      return;
     }
-  }, [details.attachmentId, details.type, imgSrc, details.url]);
 
-  useEffect(() => {
-    if (file.url) setImgSrc(file.url);
-  }, [file.url]);
+    let active = true;
+    setLoadState('loading');
+    getAttachment(attachmentId, { suppressErrorMessage: true })
+      .then((response) => {
+        if (!active) return;
 
-  if (details.type === 'IMAGE' && (imgSrc || loading)) {
+        if (response.code !== 'SUCCESS' || !response.data) {
+          setLoadState('failed');
+          return;
+        }
+
+        setDetails((current) => ({ ...current, ...response.data }));
+        if (response.data.type === 'IMAGE') {
+          if (!response.data.data) {
+            setLoadState('failed');
+            return;
+          }
+          setImgSrc(`data:${response.data.mimeType};base64,${response.data.data}`);
+        }
+        setLoadState('ready');
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setLoadState(getAttachmentLoadFailure(error));
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [attachmentId, loadAttempt, mimeType, name, size, type, url]);
+
+  if (loadState === 'loading') {
+    return (
+      <div
+        aria-label={t('attachment.loading')}
+        className={`flex h-16 w-[160px] flex-shrink-0 items-center justify-center rounded-[10px] bg-white/55 ${itemClassName}`}
+        role="status"
+      >
+        <LoadingOutlined className="text-colorPrimary" />
+      </div>
+    );
+  }
+
+  if (loadState === 'expired' || loadState === 'failed') {
+    const isImage = details.type === 'IMAGE' || file.type === 'IMAGE';
+    const title = t(
+      loadState === 'expired'
+        ? isImage
+          ? 'attachment.imageExpired'
+          : 'attachment.fileExpired'
+        : isImage
+          ? 'attachment.imageLoadFailed'
+          : 'attachment.fileLoadFailed',
+    );
+
+    return (
+      <div
+        className={`group relative flex h-16 w-[160px] flex-shrink-0 items-center gap-2 rounded-[10px] bg-white/60 p-3 ring-1 ring-[#E8EBF0] ${itemClassName}`}
+      >
+        {onRemove && (
+          <button
+            className="absolute right-1.5 top-1.5 hidden cursor-pointer border-0 bg-transparent p-0 leading-none group-hover:block"
+            onClick={() => onRemove(details.attachmentId)}
+            type="button"
+          >
+            <CloseCircleFilled className="text-[#AAB1BD] hover:text-[#7D8695]" />
+          </button>
+        )}
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[8px] bg-[#F1F3F7] text-[#98A1AF]">
+          {isImage ? <FileImageOutlined className="text-lg" /> : <FileIcon />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium text-[#626B7A]">{title}</div>
+          {loadState === 'failed' && (
+            <div className="mt-0.5 truncate text-xs text-[#98A1AF]">
+              {t('attachment.loadFailedHint')}
+            </div>
+          )}
+        </div>
+        {loadState === 'failed' && (
+          <Tooltip title={t('attachment.retry')}>
+            <button
+              aria-label={t('attachment.retry')}
+              className="flex h-7 w-7 flex-shrink-0 items-center justify-center border-0 bg-transparent text-[#7D8695] transition-colors hover:text-colorPrimary focus:outline-none focus-visible:ring-2 focus-visible:ring-colorPrimary/25"
+              onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+              type="button"
+            >
+              <ReloadOutlined />
+            </button>
+          </Tooltip>
+        )}
+      </div>
+    );
+  }
+
+  if (details.type === 'IMAGE' && imgSrc) {
     return (
       <div
         className={`relative group rounded-[10px] w-16 h-16 overflow-hidden flex-shrink-0 ${itemClassName}`}
@@ -66,25 +164,12 @@ const AttachmentItem = ({
             <CloseCircleFilled className="text-white/80 hover:text-white drop-shadow-md" />
           </button>
         )}
-        {loading ? (
-          <div className="w-full h-full bg-gray-50 flex items-center justify-center">
-            <LoadingOutlined className="text-colorPrimary" />
-          </div>
-        ) : (
-          <img alt={details.name} className="w-full h-full object-cover" src={imgSrc} />
-        )}
-      </div>
-    );
-  }
-
-  // If loading metadata (type unknown), show loading placeholder or file card with ID?
-  // Showing loading state for the whole card if type is unknown
-  if (loading && !details.type) {
-    return (
-      <div
-        className={`flex items-center justify-center p-2 bg-gray-50 rounded-lg border border-dashed border-gray-200 min-w-[60px] h-16 ${itemClassName}`}
-      >
-        <LoadingOutlined className="text-colorPrimary" />
+        <img
+          alt={details.name}
+          className="w-full h-full object-cover"
+          onError={() => setLoadState('failed')}
+          src={imgSrc}
+        />
       </div>
     );
   }
@@ -116,7 +201,7 @@ const AttachmentItem = ({
           className="text-sm text-accent-dark font-medium text-ellipsis overflow-hidden whitespace-nowrap"
           title={details.name || details.attachmentId}
         >
-          {details.name || 'Loading...'}
+          {details.name || details.attachmentId}
         </div>
         <span className="text-xs text-accent-dark">
           {details.name ? details.name.split('.').pop() : ''}

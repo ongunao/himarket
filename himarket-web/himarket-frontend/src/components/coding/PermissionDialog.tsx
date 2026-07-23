@@ -1,4 +1,8 @@
+import { SafetyCertificateOutlined } from '@ant-design/icons';
+import { Button, Modal } from 'antd';
 import { useTranslation } from 'react-i18next';
+
+import { portalModalStyles } from '../../lib/styles';
 
 import type { JsonRpcId, PermissionRequest } from '../../types/coding-protocol';
 
@@ -13,48 +17,52 @@ export function PermissionDialog({ onRespond, permission }: PermissionDialogProp
   const toolCall = request.toolCall;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-[10px] bg-white shadow-xl p-6">
-        <div className="text-base font-semibold text-gray-800 mb-3">{t('permission.title')}</div>
-        <div className="space-y-2 mb-5">
-          {toolCall.title && (
-            <div className="text-sm font-medium text-gray-700">{toolCall.title}</div>
-          )}
-          {toolCall.rawInput?.command !== undefined && toolCall.rawInput?.command !== null && (
-            <div className="text-sm text-gray-500">
-              {t('permission.command')}:{' '}
-              <code className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-mono">
-                {String(toolCall.rawInput.command)}
-              </code>
+    <Modal
+      centered
+      className="portal-modal"
+      closable={false}
+      footer={request.options.map((option) => (
+        <Button
+          key={option.optionId}
+          onClick={() => onRespond(id, option.optionId)}
+          type={option.kind.startsWith('allow') ? 'primary' : 'default'}
+        >
+          {option.name}
+        </Button>
+      ))}
+      keyboard={false}
+      mask={{ closable: false }}
+      open
+      styles={portalModalStyles}
+      title={
+        <span className="flex items-center gap-2">
+          <SafetyCertificateOutlined className="text-colorPrimary" />
+          {t('permission.title')}
+        </span>
+      }
+      width={460}
+    >
+      <div className="space-y-3">
+        {toolCall.title && (
+          <div className="text-sm font-medium leading-6 text-gray-700">{toolCall.title}</div>
+        )}
+
+        {toolCall.rawInput?.command !== undefined && toolCall.rawInput?.command !== null && (
+          <div className="rounded-[8px] bg-[#F6F7FA] px-3 py-2.5">
+            <div className="mb-1 text-xs font-medium text-gray-500">{t('permission.command')}</div>
+            <code className="block max-h-40 overflow-auto whitespace-pre-wrap break-all font-mono text-xs leading-5 text-gray-700">
+              {String(toolCall.rawInput.command)}
+            </code>
+          </div>
+        )}
+
+        {toolCall.rawInput?.description !== undefined &&
+          toolCall.rawInput?.description !== null && (
+            <div className="text-sm leading-6 text-gray-500">
+              {String(toolCall.rawInput.description)}
             </div>
           )}
-          {toolCall.rawInput?.description !== undefined &&
-            toolCall.rawInput?.description !== null && (
-              <div className="text-sm text-gray-500">{String(toolCall.rawInput.description)}</div>
-            )}
-        </div>
-        <div className="flex items-center justify-end gap-2">
-          {request.options.map((opt) => {
-            const isAllow = opt.kind.startsWith('allow');
-            return (
-              <button
-                className={`
-                  px-4 py-2 rounded-lg text-sm font-medium transition-colors
-                  ${
-                    isAllow
-                      ? 'bg-gray-800 text-white hover:bg-gray-700'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }
-                `}
-                key={opt.optionId}
-                onClick={() => onRespond(id, opt.optionId)}
-              >
-                {opt.name}
-              </button>
-            );
-          })}
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 }

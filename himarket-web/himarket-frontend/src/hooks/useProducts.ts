@@ -2,14 +2,14 @@ import React, { useEffect, useState } from 'react';
 
 import APIs from '../lib/apis';
 
-import type { IProductDetail } from '../lib/apis';
+import type { IProductDetail, ModelCategory } from '../lib/apis';
 
 function useProducts(params: {
   type: string;
   categoryIds?: string[];
   name?: string;
   needInit?: boolean;
-  ['modelFilter.category']?: 'Image' | 'TEXT';
+  ['modelFilter.category']?: ModelCategory;
 }) {
   const [data, setData] = useState<IProductDetail[]>([]);
   const [loading, setLoading] = useState(false);
@@ -24,7 +24,7 @@ function useProducts(params: {
       type: string;
       categoryIds?: string[];
       name?: string;
-      ['modelFilter.category']?: 'Image' | 'TEXT';
+      ['modelFilter.category']?: ModelCategory;
     }) => {
       setLoading(true);
       APIs.getProducts({

@@ -247,3 +247,103 @@ body,
   background-color: #e5e7eb;
   margin: 2rem 0;
 }
+
+/* Developer portal modal surface */
+.portal-modal .ant-modal-header {
+  margin: 0;
+  padding: 20px 24px 8px;
+  background: transparent;
+}
+
+.portal-modal .ant-modal-title {
+  color: #4f596b;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.portal-modal .ant-modal-body {
+  padding: 14px 24px 8px;
+}
+
+.portal-modal .ant-modal-footer {
+  margin: 0;
+  padding: 16px 24px 20px;
+  border-top: 0;
+}
+
+.portal-modal .ant-modal-close {
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  color: #929aa7;
+  border-radius: 8px;
+}
+
+.portal-modal .ant-modal-close:hover {
+  color: #4f596b;
+  background: #f2f3f7;
+}
+
+.portal-modal .ant-btn {
+  height: 36px;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.portal-modal .ant-btn-sm {
+  height: 28px;
+  border-radius: 7px;
+}
+
+.portal-modal .ant-input,
+.portal-modal .ant-input-affix-wrapper,
+.portal-modal .ant-select-selector {
+  border-color: #e1e5ec !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+
+.portal-modal .ant-input-affix-wrapper,
+.portal-modal .ant-select-single {
+  min-height: 40px;
+}
+
+.portal-modal .ant-select-single .ant-select-selector {
+  height: 40px !important;
+  align-items: center;
+}
+
+/* Compact confirmation dialog for destructive portal actions */
+.portal-confirm .ant-modal-confirm-title {
+  color: #4f596b;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.portal-confirm .ant-modal-confirm-content {
+  color: #7b8494;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.portal-confirm.ant-modal-confirm .portal-confirm-danger-icon {
+  color: #e65d68;
+  font-size: 18px;
+}
+
+.portal-confirm .ant-modal-confirm-btns {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.portal-confirm .ant-modal-confirm-btns .ant-btn {
+  height: 36px;
+  margin: 0;
+  border-radius: 8px;
+  box-shadow: none;
+}

@@ -41,14 +41,15 @@ export function SuggestedQuestions({ onSelectQuestion }: SuggestedQuestionsProps
   };
 
   return (
-    <div>
+    <div className="mx-auto max-w-[720px]">
       {/* 标题和刷新按钮 */}
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-3 flex items-center gap-2">
         <h3 className="text-sm font-semibold text-gray-600">{t('suggestions.title')}</h3>
         <button
-          className="rounded-full p-1.5 text-gray-500 transition-all duration-200 hover:bg-white/80 hover:text-gray-800"
+          className="rounded-full p-1.5 text-gray-500 transition-all duration-200 hover:bg-[#E5E9F0] hover:text-gray-800"
           onClick={handleRefresh}
           title={t('suggestions.refresh')}
+          type="button"
         >
           <ReloadOutlined
             className={`text-xs transition-transform duration-300 ${isRefreshing ? 'animate-spin' : ''}`}
@@ -57,30 +58,27 @@ export function SuggestedQuestions({ onSelectQuestion }: SuggestedQuestionsProps
       </div>
 
       {/* 问题列表 */}
-      <div className="mx-auto flex max-w-[720px] flex-col gap-2.5">
+      <div className="flex flex-col divide-y divide-[#D1D7E1] border-y border-[#D1D7E1]">
         {displayedQuestions.map((questionKey, index) => {
           const question = t(`suggestions.questions.${questionKey}`);
 
           return (
             <button
               className={`
-              min-h-[54px] cursor-pointer rounded-[12px] px-4 py-3
-              border border-[#DDE5F0]
-              transition-all duration-300 ease-in-out w-full text-left
-              hover:-translate-y-0.5 hover:border-colorPrimary/30 hover:bg-white hover:shadow-[0_8px_22px_rgba(37,56,88,0.05)]
+              min-h-[52px] w-full cursor-pointer px-3 py-3 text-left
+              transition-all duration-200 ease-out
+              hover:bg-[#E7EAF1]/80
               active:scale-[0.98]
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-colorPrimary/20
               group
               ${isRefreshing ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'}
             `}
               key={`${questionKey}-${index}`}
               onClick={() => onSelectQuestion(question)}
-              style={{
-                animationDelay: `${index * 100}ms`,
-                backgroundColor: 'rgba(255, 255, 255, 0.72)',
-              }}
+              style={{ animationDelay: `${index * 100}ms` }}
               type="button"
             >
-              <p className="flex items-center gap-2 text-sm leading-6 text-gray-700 transition-colors duration-300 group-hover:text-colorPrimary">
+              <p className="flex items-center gap-2 text-sm leading-6 text-gray-700 transition-colors duration-200 group-hover:text-gray-950">
                 <Tip className="flex-shrink-0 fill-colorPrimary" />
                 {question}
               </p>

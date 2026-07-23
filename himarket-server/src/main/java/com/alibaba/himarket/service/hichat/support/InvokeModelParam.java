@@ -27,6 +27,11 @@ public class InvokeModelParam {
     private String sessionId;
 
     /**
+     * User ID
+     */
+    private String userId;
+
+    /**
      * Model Product
      */
     private ProductResult product;
@@ -44,7 +49,17 @@ public class InvokeModelParam {
     /**
      * If need web search
      */
-    private Boolean enableWebSearch;
+    private boolean enableWebSearch;
+
+    /**
+     * If need thinking/reasoning chunks.
+     */
+    private boolean enableThinking;
+
+    /**
+     * If need rebuild memory from persisted chat history before this invocation.
+     */
+    private boolean rebuildMemory;
 
     /**
      * Gateway ID

@@ -10,9 +10,21 @@
   "search": "搜索",
   "loading": "加载中...",
   "markdown": {
-    "generatedImage": "生成的图片",
+    "generatedImage": "生成图片",
+    "generatedVideo": "生成的视频",
     "download": "下载",
+    "editImage": "继续编辑",
+    "openOriginal": "打开原文件",
     "viewOriginal": "查看原图"
+  },
+  "attachment": {
+    "loading": "正在加载附件...",
+    "imageExpired": "图片已过期",
+    "fileExpired": "附件已过期",
+    "imageLoadFailed": "图片加载失败",
+    "fileLoadFailed": "附件加载失败",
+    "loadFailedHint": "请稍后重试",
+    "retry": "重试"
   },
   "status": {
     "product": {

@@ -19,6 +19,7 @@
 package com.alibaba.himarket.service.hichat.support;
 
 import com.alibaba.himarket.support.chat.ChatUsage;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -31,7 +32,7 @@ import lombok.NoArgsConstructor;
  * <pre>
  * {
  *   "chatId": "chat-id",
- *   "type": "assistant|thinking|tool_call|tool_result|done|error",
+ *   "type": "ASSISTANT|THINKING|IMAGE|TOOL_CALL|TOOL_RESULT|DONE|ERROR",
  *   "content": ...,  // main content (varies by type)
  *   "usage": {...},  // token usage (optional)
  *   "error": "...",  // error code (optional)
@@ -77,8 +78,6 @@ public class ChatEvent {
 
     /**
      * Chunk type enumeration.
-     *
-     * <p>Serialized as lowercase with underscores in JSON (e.g., "assistant", "tool_call").
      */
     public enum EventType {
         /**
@@ -95,6 +94,11 @@ public class ChatEvent {
          * Thinking/reasoning process
          */
         THINKING,
+
+        /**
+         * Generated image
+         */
+        IMAGE,
 
         /**
          * Tool call initiated
@@ -144,6 +148,16 @@ public class ChatEvent {
      */
     public static ChatEvent thinking(String chatId, String thought) {
         return ChatEvent.builder().chatId(chatId).type(EventType.THINKING).content(thought).build();
+    }
+
+    /**
+     * Create a generated image chunk
+     *
+     * @param chatId Conversation ID
+     * @param image generated image metadata
+     */
+    public static ChatEvent image(String chatId, ImageContent image) {
+        return ChatEvent.builder().chatId(chatId).type(EventType.IMAGE).content(image).build();
     }
 
     /**
@@ -201,7 +215,7 @@ public class ChatEvent {
     }
 
     /**
-     * Tool call content structure (used in content field when type=tool_call)
+     * Tool call content structure (used in content field when type=TOOL_CALL)
      */
     @Data
     @NoArgsConstructor
@@ -221,16 +235,22 @@ public class ChatEvent {
         /**
          * Tool arguments (as JSON object)
          */
-        private Object arguments;
-
-        /**
-         * MCP server name (optional, identifies which MCP server provides this tool)
-         */
-        private String mcpServerName;
+        private Map<String, Object> arguments;
     }
 
     /**
-     * Tool result content structure (used in content field when type=tool_result)
+     * Generated image content structure
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class ImageContent {
+        private String attachmentId;
+    }
+
+    /**
+     * Tool result content structure (used in content field when type=TOOL_RESULT)
      */
     @Data
     @NoArgsConstructor

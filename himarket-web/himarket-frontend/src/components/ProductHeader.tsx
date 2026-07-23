@@ -4,6 +4,7 @@ import {
   ClockCircleFilled,
   DeleteOutlined,
   ExclamationCircleFilled,
+  InboxOutlined,
   InfoCircleOutlined,
   PlusOutlined,
   RobotOutlined,
@@ -21,13 +22,13 @@ import {
   Pagination,
   Spin,
   Table,
-  Popover,
 } from 'antd';
-import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 
 import { LoginPrompt } from './LoginPrompt';
+import MarkdownRender from './MarkdownRender';
 import { useAuth } from '../hooks/useAuth';
 import {
   getConsumers,
@@ -36,18 +37,20 @@ import {
   getProductSubscriptions,
 } from '../lib/apis';
 import APIs, { type ISubscription } from '../lib/apis';
+import { portalModalStyles } from '../lib/styles';
 
 import type { getProductSubscriptionStatus } from '../lib/apis';
 import type { IMCPConfig, IProductIcon, IAgentConfig } from '../lib/apis/typing';
 import type { Consumer } from '../types/consumer';
 
-const { Paragraph, Title } = Typography;
+const { Title } = Typography;
 
 export interface ProductHeaderHandle {
   showManageModal: () => void;
 }
 
 interface ProductHeaderProps {
+  appearance?: 'default' | 'agent' | 'mcp' | 'model' | 'api' | 'skill' | 'worker';
   name: string;
   description: string;
   icon?: IProductIcon;
@@ -87,9 +90,65 @@ const getIconUrl = (icon?: IProductIcon, defaultIcon?: string): string => {
   }
 };
 
+interface ProductDescriptionProps {
+  collapseLabel: string;
+  content: string;
+  expandLabel: string;
+  isCollapsible: boolean;
+}
+
+function ProductDescription({
+  collapseLabel,
+  content,
+  expandLabel,
+  isCollapsible,
+}: ProductDescriptionProps) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [canExpand, setCanExpand] = useState(false);
+
+  useEffect(() => {
+    const element = contentRef.current;
+    if (!element || !isCollapsible || expanded) return;
+
+    const updateCanExpand = () => {
+      setCanExpand(element.scrollHeight > element.clientHeight + 1);
+    };
+
+    updateCanExpand();
+    if (typeof ResizeObserver === 'undefined') return;
+
+    const resizeObserver = new ResizeObserver(updateCanExpand);
+    resizeObserver.observe(element);
+    return () => resizeObserver.disconnect();
+  }, [content, expanded, isCollapsible]);
+
+  return (
+    <div>
+      <div
+        className={isCollapsible && !expanded ? 'max-h-24 overflow-hidden' : undefined}
+        ref={contentRef}
+      >
+        <MarkdownRender content={content} variant="product-description" />
+      </div>
+      {isCollapsible && canExpand && (
+        <button
+          aria-expanded={expanded}
+          className="mt-1.5 text-xs font-medium text-[#6267E9] transition-colors hover:text-[#4F55D8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-colorPrimary/20"
+          onClick={() => setExpanded((value) => !value)}
+          type="button"
+        >
+          {expanded ? collapseLabel : expandLabel}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export const ProductHeader = forwardRef<ProductHeaderHandle, ProductHeaderProps>(
   (
     {
+      appearance = 'default',
       defaultIcon = '/default-icon.png',
       description,
       icon,
@@ -138,6 +197,7 @@ export const ProductHeader = forwardRef<ProductHeaderHandle, ProductHeaderProps>
     const [searchKeyword, setSearchKeyword] = useState('');
 
     const shouldShowSubscribeButton = subscribable !== false;
+    const isMarketAppearance = appearance !== 'default';
 
     // 获取产品ID - 根据产品类型获取正确的参数
     const productId = apiProductId || mcpProductId || agentProductId || modelProductId || '';
@@ -332,7 +392,13 @@ export const ProductHeader = forwardRef<ProductHeaderHandle, ProductHeaderProps>
 
     return (
       <>
-        <div className="rounded-[14px] border border-[#DDE5F0] bg-white/90 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)] backdrop-blur-sm">
+        <div
+          className={
+            isMarketAppearance
+              ? 'border-b border-[#E2E6ED] px-1 pb-4 pt-1'
+              : 'rounded-[14px] border border-[#DDE5F0] bg-white/90 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)] backdrop-blur-sm'
+          }
+        >
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div className="flex min-w-0 items-start gap-4">
@@ -340,7 +406,11 @@ export const ProductHeader = forwardRef<ProductHeaderHandle, ProductHeaderProps>
                 (productType === 'REST_API' ||
                   productType === 'AGENT_API' ||
                   productType === 'MODEL_API') ? (
-                  <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-[12px] border border-[#E1E7F0] bg-[#F7F9FC] text-gray-800">
+                  <div
+                    className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-[12px] text-gray-800 ${
+                      isMarketAppearance ? 'bg-[#F1F3F7]' : 'border border-[#E1E7F0] bg-[#F7F9FC]'
+                    }`}
+                  >
                     {productType === 'REST_API' ? (
                       <ApiOutlined className="text-2xl" />
                     ) : productType === 'AGENT_API' ? (
@@ -352,7 +422,9 @@ export const ProductHeader = forwardRef<ProductHeaderHandle, ProductHeaderProps>
                 ) : (
                   <img
                     alt={name}
-                    className="h-14 w-14 flex-shrink-0 rounded-[12px] border border-[#E1E7F0] bg-[#F7F9FC] object-cover"
+                    className={`h-14 w-14 flex-shrink-0 rounded-[12px] object-cover ${
+                      isMarketAppearance ? 'bg-[#F1F3F7]' : 'border border-[#E1E7F0] bg-[#F7F9FC]'
+                    }`}
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       if (
@@ -376,13 +448,19 @@ export const ProductHeader = forwardRef<ProductHeaderHandle, ProductHeaderProps>
                 )}
                 <div className="min-w-0 flex-1">
                   <Title
-                    className="!mb-1 !break-words !text-2xl !font-semibold !leading-tight !text-gray-950"
+                    className={`!mb-1 !break-words !font-semibold !leading-tight ${
+                      isMarketAppearance ? '!text-xl !text-[#303A4A]' : '!text-2xl !text-gray-950'
+                    }`}
                     level={2}
                   >
                     {name}
                   </Title>
                   {updatedAt && (
-                    <div className="text-sm text-gray-500">
+                    <div
+                      className={
+                        isMarketAppearance ? 'text-sm text-[#778190]' : 'text-sm text-gray-500'
+                      }
+                    >
                       {t('updatedAt', {
                         date: new Date(updatedAt)
                           .toLocaleDateString(i18n.language, {
@@ -441,118 +519,105 @@ export const ProductHeader = forwardRef<ProductHeaderHandle, ProductHeaderProps>
             </div>
 
             {description && (
-              <Paragraph className="!mb-0 max-w-5xl break-words text-sm leading-6 text-gray-600">
-                {description}
-              </Paragraph>
+              <div className={isMarketAppearance ? 'w-full' : 'max-w-5xl'}>
+                <ProductDescription
+                  collapseLabel={t('description.collapse')}
+                  content={description}
+                  expandLabel={t('description.expand')}
+                  isCollapsible={isMarketAppearance}
+                  key={description}
+                />
+              </div>
             )}
           </div>
         </div>
 
         {/* 订阅管理弹窗 */}
         <Modal
+          centered
+          className="portal-modal"
           footer={null}
           onCancel={handleManageCancel}
           open={isManageModalVisible}
           style={{ maxWidth: 'calc(100vw - 32px)' }}
-          styles={{
-            body: {
-              padding: '0px',
-            },
-            header: {
-              borderRadius: '8px 8px 0 0',
-              marginBottom: 0,
-              paddingBottom: '8px',
-            },
-          }}
+          styles={portalModalStyles}
           title={t('modal.title')}
-          width={640}
+          width={680}
         >
-          <div className="px-4 py-4 sm:px-6">
+          <div className="pb-2">
             {/* 搜索和操作栏 */}
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <Input
                 allowClear
-                className="w-full rounded-lg sm:w-[250px]"
+                className="w-full sm:w-[280px]"
                 onChange={handleSearchChange}
                 onPressEnter={handleSearchKeyPress}
                 placeholder={t('modal.searchConsumer')}
                 prefix={<SearchOutlined className="text-gray-400" />}
                 value={searchKeyword}
               />
-              <Popover
-                content={
-                  <div className="w-64">
-                    <div className="mb-3 text-sm font-medium text-gray-700">
-                      {t('modal.selectConsumer')}
-                    </div>
-                    <Select
-                      filterOption={(input, option) =>
-                        (option?.children as unknown as string)
-                          ?.toLowerCase()
-                          .includes(input.toLowerCase())
-                      }
-                      loading={consumersLoading}
-                      notFoundContent={consumersLoading ? t('loading') : t('modal.noConsumers')}
-                      onChange={setSelectedConsumerId}
-                      placeholder={t('modal.consumerPlaceholder')}
-                      showSearch
-                      style={{ width: '100%' }}
-                      value={selectedConsumerId}
-                    >
-                      {consumers
-                        .filter((consumer) => {
-                          const isAlreadySubscribed = subscriptionStatus?.subscribedConsumers?.some(
-                            (item) => item.consumer.consumerId === consumer.consumerId,
-                          );
-                          return !isAlreadySubscribed;
-                        })
-                        .map((consumer) => (
-                          <Select.Option key={consumer.consumerId} value={consumer.consumerId}>
-                            {consumer.name}
-                          </Select.Option>
-                        ))}
-                    </Select>
-                    <div className="mt-4 flex justify-end gap-2">
-                      <Button
-                        className="rounded-lg"
-                        onClick={cancelApplyingSubscription}
-                        size="small"
-                      >
-                        {t('modal.cancel')}
-                      </Button>
-                      <Button
-                        className="rounded-lg"
-                        disabled={!selectedConsumerId}
-                        loading={submitLoading}
-                        onClick={handleApplySubscription}
-                        size="small"
-                        type="primary"
-                      >
-                        {t('modal.confirm')}
-                      </Button>
-                    </div>
-                  </div>
-                }
-                onOpenChange={(open) => {
-                  if (!open) cancelApplyingSubscription();
-                }}
-                open={isApplyingSubscription}
-                placement="bottomRight"
-                trigger="click"
+              <Button
+                className="w-full sm:w-auto"
+                icon={<PlusOutlined />}
+                onClick={startApplyingSubscription}
+                type="primary"
               >
-                <Button
-                  className="w-full rounded-[10px] sm:w-auto"
-                  icon={<PlusOutlined />}
-                  onClick={startApplyingSubscription}
-                  type="primary"
-                >
-                  {t('subscribe.action')}
-                </Button>
-              </Popover>
+                {t('subscribe.action')}
+              </Button>
             </div>
 
+            {isApplyingSubscription && (
+              <div className="mb-4 flex flex-col gap-3 rounded-[10px] bg-[#F5F6F9] p-3 sm:flex-row sm:items-end">
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1.5 text-xs font-medium text-[#697386]">
+                    {t('modal.selectConsumer')}
+                  </div>
+                  <Select
+                    filterOption={(input, option) =>
+                      (option?.children as unknown as string)
+                        ?.toLowerCase()
+                        .includes(input.toLowerCase())
+                    }
+                    loading={consumersLoading}
+                    notFoundContent={consumersLoading ? t('loading') : t('modal.noConsumers')}
+                    onChange={setSelectedConsumerId}
+                    placeholder={t('modal.consumerPlaceholder')}
+                    showSearch
+                    style={{ width: '100%' }}
+                    value={selectedConsumerId}
+                  >
+                    {consumers
+                      .filter((consumer) => {
+                        const isAlreadySubscribed = subscriptionStatus?.subscribedConsumers?.some(
+                          (item) => item.consumer.consumerId === consumer.consumerId,
+                        );
+                        return !isAlreadySubscribed;
+                      })
+                      .map((consumer) => (
+                        <Select.Option key={consumer.consumerId} value={consumer.consumerId}>
+                          {consumer.name}
+                        </Select.Option>
+                      ))}
+                  </Select>
+                </div>
+                <div className="flex flex-shrink-0 justify-end gap-2">
+                  <Button disabled={submitLoading} onClick={cancelApplyingSubscription}>
+                    {t('modal.cancel')}
+                  </Button>
+                  <Button
+                    disabled={!selectedConsumerId}
+                    loading={submitLoading}
+                    onClick={handleApplySubscription}
+                    type="primary"
+                  >
+                    {t('modal.confirm')}
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* 订阅列表表格 */}
-            <div className="overflow-x-auto rounded-lg border border-gray-200">
+            <div className="overflow-x-auto rounded-[10px] border border-[#E4E7ED] bg-white/60">
               {detailsLoading ? (
                 <div className="p-8 text-center">
                   <Spin size="large" />
@@ -635,8 +700,11 @@ export const ProductHeader = forwardRef<ProductHeaderHandle, ProductHeaderProps>
                   size="small"
                 />
               ) : (
-                <div className="p-8 text-center text-gray-500">
-                  {searchKeyword ? t('table.noMatchedRecords') : t('table.noRecords')}
+                <div className="flex min-h-32 flex-col items-center justify-center gap-2 px-4 py-7 text-sm text-[#89919F]">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-[#F2F3F7] text-[#A0A7B3]">
+                    <InboxOutlined />
+                  </span>
+                  <span>{searchKeyword ? t('table.noMatchedRecords') : t('table.noRecords')}</span>
                 </div>
               )}
             </div>

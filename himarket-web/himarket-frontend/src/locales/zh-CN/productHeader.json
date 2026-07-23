@@ -1,6 +1,10 @@
 {
   "loading": "加载中...",
   "updatedAt": "{{date}} 更新",
+  "description": {
+    "expand": "展开描述",
+    "collapse": "收起描述"
+  },
   "message": {
     "subscriptionDetailsFailed": "获取订阅详情失败，请重试",
     "selectConsumer": "请选择消费者",

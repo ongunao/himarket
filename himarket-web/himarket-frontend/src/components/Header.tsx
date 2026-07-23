@@ -65,12 +65,12 @@ export function Header() {
                       className={`
                       px-3.5 py-1 rounded-[9px] text-[15px] font-medium
                       transition-all duration-300 ease-in-out
-                      ${
-                        isActiveTab(tab.path)
-                          ? 'bg-colorPrimary text-white shadow-sm'
-                          : 'text-gray-700 hover:bg-colorPrimaryBg hover:text-colorPrimary hover:shadow-sm'
-                      }
-                    `}
+                    ${
+                      isActiveTab(tab.path)
+                        ? 'bg-colorPrimarySoftHover font-semibold text-colorPrimary'
+                        : 'text-gray-700 hover:bg-colorPrimarySoft hover:text-colorPrimary'
+                    }
+                  `}
                     >
                       {t(tab.label)}
                     </div>

@@ -383,7 +383,10 @@ public class ToolManager {
         String rawKey = sb.toString();
         String key = "tool:" + DigestUtils.md5DigestAsHex(rawKey.getBytes(StandardCharsets.UTF_8));
 
-        log.debug("MCP client cache key built, rawKey={}, cacheKey={}", rawKey, key);
+        log.debug(
+                "MCP client cache key built, serverName={}, cacheKey={}",
+                config.getMcpServerName(),
+                key);
 
         return key;
     }

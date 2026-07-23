@@ -207,3 +207,99 @@
 .himarket-markdown-chat.markdown-body a:hover {
   text-decoration: underline;
 }
+
+.himarket-markdown-thinking.markdown-body,
+.himarket-markdown-thinking.markdown-body p,
+.himarket-markdown-thinking.markdown-body li {
+  color: #667085;
+}
+
+.himarket-markdown-thinking.markdown-body strong,
+.himarket-markdown-thinking.markdown-body h1,
+.himarket-markdown-thinking.markdown-body h2,
+.himarket-markdown-thinking.markdown-body h3,
+.himarket-markdown-thinking.markdown-body h4 {
+  color: #4f5968;
+}
+
+.himarket-markdown-product-description.markdown-body {
+  overflow-wrap: anywhere;
+}
+
+.himarket-markdown-product-description.markdown-body > :first-child {
+  margin-top: 0;
+}
+
+.himarket-markdown-product-description.markdown-body > :last-child {
+  margin-bottom: 0;
+}
+
+.himarket-markdown-product-description.markdown-body p {
+  margin: 0.2rem 0;
+  color: #596273;
+  line-height: 1.72;
+}
+
+.himarket-markdown-product-description.markdown-body strong {
+  color: #414b5d;
+  font-weight: 600;
+}
+
+.himarket-markdown-product-description.markdown-body ul,
+.himarket-markdown-product-description.markdown-body ol {
+  margin: 0.4rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.himarket-markdown-product-description.markdown-body ul {
+  list-style: disc outside;
+}
+
+.himarket-markdown-product-description.markdown-body ol {
+  list-style: decimal outside;
+}
+
+.himarket-markdown-product-description.markdown-body li {
+  margin: 0.1rem 0;
+  color: #596273;
+  line-height: 1.68;
+}
+
+.himarket-markdown-product-description.markdown-body li::marker {
+  color: #939cab;
+}
+
+.himarket-markdown-product-description.markdown-body li > p {
+  margin: 0;
+}
+
+.himarket-markdown-product-description.markdown-body h1,
+.himarket-markdown-product-description.markdown-body h2,
+.himarket-markdown-product-description.markdown-body h3,
+.himarket-markdown-product-description.markdown-body h4 {
+  margin: 0.55rem 0 0.25rem;
+  padding: 0;
+  border: 0;
+  color: #354052;
+  font-size: 1em;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.himarket-markdown-product-description.markdown-body a {
+  color: #6267e9;
+  text-decoration: none;
+}
+
+.himarket-markdown-product-description.markdown-body a:hover {
+  text-decoration: underline;
+}
+
+.himarket-markdown-product-description.markdown-body code:not(pre code) {
+  border: 1px solid rgba(214, 219, 230, 0.8);
+  border-radius: 5px;
+  background: rgba(245, 247, 251, 0.82);
+  color: #495568;
+  padding: 0.05rem 0.28rem;
+  font-size: 0.9em;
+}

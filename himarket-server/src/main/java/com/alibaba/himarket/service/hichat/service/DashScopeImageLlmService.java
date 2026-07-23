@@ -18,266 +18,78 @@
  */
 package com.alibaba.himarket.service.hichat.service;
 
-import com.alibaba.himarket.core.exception.ChatError;
-import com.alibaba.himarket.dto.result.chat.LlmInvokeResult;
-import com.alibaba.himarket.dto.result.product.ProductResult;
+import com.alibaba.himarket.service.ChatAttachmentService;
 import com.alibaba.himarket.service.GatewayService;
 import com.alibaba.himarket.service.hichat.manager.ChatBotManager;
 import com.alibaba.himarket.service.hichat.service.dashscope.DashScopeImageChatModel;
-import com.alibaba.himarket.service.hichat.support.ChatContext;
-import com.alibaba.himarket.service.hichat.support.ChatEvent;
+import com.alibaba.himarket.service.hichat.support.GeneratedImageDownloader;
 import com.alibaba.himarket.service.hichat.support.InvokeModelParam;
 import com.alibaba.himarket.service.hichat.support.LlmChatRequest;
-import com.alibaba.himarket.support.chat.ChatUsage;
-import com.alibaba.himarket.support.common.Strings;
 import com.alibaba.himarket.support.enums.AIProtocol;
 import com.alibaba.himarket.support.product.ModelFeature;
-import io.agentscope.core.message.ContentBlock;
-import io.agentscope.core.message.ImageBlock;
-import io.agentscope.core.message.Msg;
-import io.agentscope.core.message.TextBlock;
-import io.agentscope.core.message.URLSource;
-import io.agentscope.core.model.ChatResponse;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.model.Model;
-import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
-import reactor.core.publisher.Flux;
 
 @Service
 @Slf4j
-public class DashScopeImageLlmService extends AbstractLlmService {
+public class DashScopeImageLlmService extends AbstractImageLlmService {
 
-    public DashScopeImageLlmService(GatewayService gatewayService, ChatBotManager chatBotManager) {
-        super(gatewayService, chatBotManager);
-    }
+    private static final String IMAGE_GENERATION_PATH =
+            "/services/aigc/multimodal-generation/generation";
 
-    @Override
-    public Flux<ChatEvent> invokeLlm(
-            InvokeModelParam param, Consumer<LlmInvokeResult> resultHandler) {
-
-        // Create context to collect answer and usage
-        ChatContext chatContext = new ChatContext(param.getChatId());
-
-        try {
-            LlmChatRequest request = composeRequest(param);
-            Model chatModel = newChatModel(request);
-            Msg userMsg = param.getUserMessage();
-
-            // Start estimate time and collect answer
-            chatContext.start();
-            return Flux.concat(
-                            // Emit START event
-                            Flux.just(ChatEvent.start(param.getChatId())),
-
-                            // Stream image generation events with error handling
-                            applyErrorHandling(
-                                    chatModel.stream(List.of(userMsg), null, null)
-                                            .next()
-                                            .flatMapMany(
-                                                    response ->
-                                                            convertToChatEvents(
-                                                                    response, chatContext))
-                                            // Collect answer content
-                                            .doOnNext(chatContext::collect),
-                                    param.getChatId(),
-                                    chatContext))
-                    // Always emit DONE at the end
-                    .concatWith(
-                            Flux.defer(
-                                    () -> {
-                                        chatContext.stop();
-                                        return Flux.just(
-                                                ChatEvent.done(
-                                                        param.getChatId(), chatContext.getUsage()));
-                                    }))
-                    // Unified result handling for all completion scenarios
-                    .doFinally(signal -> resultHandler.accept(chatContext.toResult()));
-
-        } catch (Exception e) {
-            log.error(
-                    "Failed to process image generation request, chatId={}, errorMessage={}",
-                    param.getChatId(),
-                    e.getMessage(),
-                    e);
-            ChatError chatError = ChatError.from(e);
-            chatContext.fail();
-            chatContext.appendAnswer(
-                    String.format("[Image generation failed. Reason: %s]", e.getMessage()));
-            resultHandler.accept(chatContext.toResult());
-
-            return Flux.just(
-                    ChatEvent.start(param.getChatId()),
-                    ChatEvent.error(
-                            param.getChatId(),
-                            chatError.name(),
-                            Strings.blankToDefault(e.getMessage(), chatError.getDescription())),
-                    ChatEvent.done(param.getChatId(), null));
-        }
-    }
-
-    private Flux<ChatEvent> applyErrorHandling(
-            Flux<ChatEvent> flux, String chatId, ChatContext chatContext) {
-        return flux.doOnCancel(
-                        () -> {
-                            log.warn("Image generation was canceled by client, chatId={}", chatId);
-                            chatContext.fail();
-                        })
-                .doOnError(
-                        error -> {
-                            log.error(
-                                    "Image generation stream encountered error, chatId={},"
-                                            + " errorMessage={}",
-                                    chatId,
-                                    error.getMessage(),
-                                    error);
-                            chatContext.fail();
-                            chatContext.appendAnswer(
-                                    String.format(
-                                            "\n[Image generation error: %s]", error.getMessage()));
-                        })
-                .onErrorResume(
-                        error -> {
-                            ChatError chatError = ChatError.from(error);
-                            log.error(
-                                    "Image generation failed, chatId={}, errorType={},"
-                                            + " errorMessage={}",
-                                    chatId,
-                                    chatError,
-                                    error.getMessage(),
-                                    error);
-
-                            return Flux.just(
-                                    ChatEvent.error(
-                                            chatId,
-                                            chatError.name(),
-                                            Strings.blankToDefault(
-                                                    error.getMessage(),
-                                                    chatError.getDescription())));
-                        });
+    public DashScopeImageLlmService(
+            GatewayService gatewayService,
+            ChatBotManager chatBotManager,
+            ChatAttachmentService chatAttachmentService,
+            GeneratedImageDownloader imageDownloader) {
+        super(gatewayService, chatBotManager, chatAttachmentService, imageDownloader);
     }
 
     @Override
     protected LlmChatRequest composeRequest(InvokeModelParam param) {
         LlmChatRequest request = super.composeRequest(param);
-        ProductResult product = param.getProduct();
+        request.setUri(resolveImageRoute(request, IMAGE_GENERATION_PATH));
 
-        String generationPath = "/api/v1/services/aigc/multimodal-generation/generation";
-
-        // Set base URL if configured
-        if (product.getModelConfig() != null) {
-            URI uri =
-                    buildUri(
-                            product.getModelConfig(),
-                            request.getGatewayUris(),
-                            generationPath,
-                            (pathValue, pathType) -> pathValue);
-
-            request.setUri(uri);
-        }
-
-        Map<String, Object> bodyParams = request.getBodyParams();
-        if (bodyParams != null && !bodyParams.containsKey("parameters")) {
-            // Add default parameters for image generation if not provided
-            Map<String, Object> defaultParams =
-                    Map.of("n", 1, "prompt_extend", true, "watermark", false);
-            bodyParams.put("parameters", defaultParams);
-
-            log.debug(
-                    "Added default parameters for image generation, parameters={}", defaultParams);
-        }
-
+        Map<String, Object> bodyParams =
+                request.getBodyParams() != null
+                        ? new HashMap<>(request.getBodyParams())
+                        : new HashMap<>();
+        bodyParams.putIfAbsent("n", 1);
+        bodyParams.putIfAbsent("prompt_extend", true);
+        bodyParams.putIfAbsent("watermark", false);
+        request.setBodyParams(bodyParams);
         return request;
     }
 
     @Override
     public Model newChatModel(LlmChatRequest request) {
-        // Build GenerateOptions with additional parameters
-        GenerateOptions.Builder optionsBuilder =
+        GenerateOptions options =
                 GenerateOptions.builder()
                         .additionalHeaders(request.getHeaders())
                         .additionalQueryParams(request.getQueryParams())
                         .additionalBodyParams(request.getBodyParams())
-                        .stream(true);
-
-        GenerateOptions options = optionsBuilder.build();
+                        .stream(false)
+                        .build();
 
         ModelFeature modelFeature = getOrDefaultModelFeature(request.getProduct());
-        String modelName = modelFeature.getModel();
-        log.info("Creating DashScopeImageChatModel, modelName={}", modelName);
-
-        String baseUrl = request.getUri() != null ? request.getUri().toString() : null;
+        log.info("Creating DashScope image model, modelName={}", modelFeature.getModel());
 
         return DashScopeImageChatModel.builder()
                 .apiKey(request.getApiKey())
-                .modelName(modelName)
+                .modelName(modelFeature.getModel())
                 .enableSearch(modelFeature.getWebSearch())
                 .defaultOptions(options)
-                .baseUrl(baseUrl)
+                .baseUrl(request.getUri().toString())
                 .build();
     }
 
     @Override
     public List<AIProtocol> getProtocols() {
         return List.of(AIProtocol.DASHSCOPE_IMAGE);
-    }
-
-    /**
-     * Convert ChatResponse to ChatEvents stream.
-     *
-     * @param response    ChatResponse containing content and usage
-     * @param chatContext Chat context to collect usage and get chat ID
-     * @return Flux of ChatEvents
-     */
-    private Flux<ChatEvent> convertToChatEvents(ChatResponse response, ChatContext chatContext) {
-
-        String chatId = chatContext.getChatId();
-
-        // Extract usage from response and set to context (similar to ChatFormatter.getUsage())
-        if (response.getUsage() != null) {
-            io.agentscope.core.model.ChatUsage u = response.getUsage();
-            ChatUsage usage =
-                    ChatUsage.builder()
-                            .inputTokens(u.getInputTokens())
-                            .outputTokens(u.getOutputTokens())
-                            .totalTokens(u.getTotalTokens())
-                            .build();
-
-            chatContext.setUsage(usage);
-        }
-
-        // Process content (text and images)
-        List<ContentBlock> content = response.getContent();
-        if (CollectionUtils.isEmpty(content)) {
-            return Flux.just(ChatEvent.text(chatId, "[No content generated]"));
-        }
-
-        return Flux.fromIterable(content)
-                .flatMap(
-                        block -> {
-                            if (block instanceof TextBlock textBlock) {
-                                // Text content
-                                return Flux.just(ChatEvent.text(chatId, textBlock.getText()));
-                            } else if (block instanceof ImageBlock imageBlock) {
-                                // Image URL - send as markdown format
-                                String imageUrl = ((URLSource) imageBlock.getSource()).getUrl();
-                                String image = String.format("![Generated Image](%s)", imageUrl);
-                                log.info(
-                                        "Generated image URL, chatId={}, imageUrl={}",
-                                        chatId,
-                                        imageUrl);
-                                return Flux.just(ChatEvent.text(chatId, image));
-                            } else {
-                                log.warn(
-                                        "Unsupported content block type, blockType={}",
-                                        block.getClass().getName());
-                                return Flux.empty();
-                            }
-                        });
     }
 }

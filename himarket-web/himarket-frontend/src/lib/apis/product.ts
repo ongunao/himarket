@@ -15,6 +15,8 @@ import type {
   IWorkerConfig,
 } from './typing';
 
+export type ModelCategory = 'TEXT' | 'Image';
+
 export interface IProductDetail {
   productId: string;
   name: string;
@@ -49,6 +51,7 @@ export interface IProductDetail {
   feature?: {
     modelFeature: {
       model: string;
+      enableThinking?: boolean;
       webSearch: boolean;
       enableMultiModal: boolean;
     };
@@ -69,7 +72,7 @@ export function getProducts(params: {
   page?: number;
   size?: number;
   sortBy?: string;
-  ['modelFilter.category']?: 'Image' | 'TEXT';
+  ['modelFilter.category']?: ModelCategory;
 }) {
   return request.get<RespI<GetProductsResp>, RespI<GetProductsResp>>('/products', {
     params: {

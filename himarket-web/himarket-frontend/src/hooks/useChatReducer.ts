@@ -1,10 +1,17 @@
-import type { IAttachment } from '../lib/apis';
-import type { IModelConversation, IMessageChunk, IMcpToolCall, IMcpToolResponse } from '../types';
+import type { IChatAttachment } from '../lib/apis';
+import type {
+  IChatMessageChunk,
+  IGeneratedImage,
+  IModelConversation,
+  IMcpToolCall,
+  IMcpToolResponse,
+} from '../types';
 
 // ============ Action Types ============
 
 export type ChatAction =
   | { type: 'RESET' }
+  | { type: 'CLEAR_LOADING' }
   | { type: 'SET_CONVERSATIONS'; payload: IModelConversation[] }
   | {
       type: 'ADD_CONVERSATION';
@@ -13,8 +20,7 @@ export type ChatAction =
         conversationId: string;
         questionId: string;
         content: string;
-        attachments?: IAttachment[];
-        selectedModelId?: string;
+        attachments?: IChatAttachment[];
         sessionId?: string;
       };
     }
@@ -24,8 +30,27 @@ export type ChatAction =
         modelId: string;
         conversationId: string;
         questionId: string;
-        chunk: string;
         fullContent: string;
+        chunk: string;
+      };
+    }
+  | {
+      type: 'APPEND_THINKING';
+      payload: {
+        modelId: string;
+        conversationId: string;
+        questionId: string;
+        content: string;
+      };
+    }
+  | {
+      type: 'ADD_IMAGE';
+      payload: {
+        modelId: string;
+        conversationId: string;
+        questionId: string;
+        fullContent: string;
+        image: IGeneratedImage;
       };
     }
   | {
@@ -62,16 +87,6 @@ export type ChatAction =
       };
     }
   | {
-      type: 'ERROR';
-      payload: {
-        modelId: string;
-        conversationId: string;
-        questionId: string;
-        errorMsg: string;
-        fullContent: string;
-      };
-    }
-  | {
       type: 'CHANGE_ACTIVE_ANSWER';
       payload: {
         modelId: string;
@@ -80,15 +95,6 @@ export type ChatAction =
         direction: 'prev' | 'next';
       };
     }
-  | {
-      type: 'ADD_MODELS';
-      payload: {
-        modelIds: string[];
-        selectedModelId?: string;
-        sessionId?: string;
-      };
-    }
-  | { type: 'CLOSE_MODEL'; payload: { modelId: string } }
   | {
       type: 'SET_LOADING';
       payload: {
@@ -111,9 +117,8 @@ export type ChatAction =
         modelId: string;
         conversationId: string;
         questionId: string;
-        chunk: string;
         fullContent: string;
-        lastIdx: number;
+        chunk: string;
       };
     }
   | {
@@ -134,7 +139,15 @@ export type ChatAction =
         fullContent: string;
       };
     }
-  | { type: 'GLOBAL_ERROR'; payload: { errorMsg: string } };
+  | {
+      type: 'GLOBAL_ERROR';
+      payload: {
+        modelId: string;
+        conversationId: string;
+        questionId: string;
+        errorMsg: string;
+      };
+    };
 
 // ============ Helper: update a specific question within the state ============
 
@@ -167,23 +180,26 @@ function updateQuestion(
   });
 }
 
-// ============ Helper: merge or create text chunk ============
-
-function mergeTextChunk(chunks: IMessageChunk[], textChunk: string): IMessageChunk[] {
-  const lastChunk = chunks[chunks.length - 1];
-  if (lastChunk && lastChunk.type === 'text') {
-    return chunks.map((c, i) =>
-      i === chunks.length - 1 ? { ...c, content: (c.content || '') + textChunk } : c,
-    );
+function appendMessageChunk(
+  chunks: IChatMessageChunk[] | undefined,
+  chunk: IChatMessageChunk,
+): IChatMessageChunk[] | undefined {
+  if ((chunk.type === 'ASSISTANT' || chunk.type === 'THINKING') && !chunk.content) {
+    return chunks;
   }
-  return [
-    ...chunks,
-    {
-      content: textChunk,
-      id: `chunk-text-${Date.now()}`,
-      type: 'text' as const,
-    },
-  ];
+
+  const next = [...(chunks || [])];
+  const last = next[next.length - 1];
+  if ((chunk.type === 'ASSISTANT' || chunk.type === 'THINKING') && last?.type === chunk.type) {
+    next[next.length - 1] = {
+      ...last,
+      content: `${last.content || ''}${chunk.content || ''}`,
+    };
+    return next;
+  }
+
+  next.push(chunk);
+  return next;
 }
 
 // ============ Reducer ============
@@ -193,19 +209,21 @@ export function chatReducer(state: IModelConversation[], action: ChatAction): IM
     case 'RESET':
       return [];
 
+    case 'CLEAR_LOADING':
+      return state.map((model) => ({
+        ...model,
+        conversations: model.conversations.map((conversation) => ({
+          ...conversation,
+          loading: false,
+        })),
+      }));
+
     case 'SET_CONVERSATIONS':
       return action.payload;
 
     case 'ADD_CONVERSATION': {
-      const {
-        attachments,
-        content,
-        conversationId,
-        modelId,
-        questionId,
-        selectedModelId,
-        sessionId,
-      } = action.payload;
+      const { attachments, content, conversationId, modelId, questionId, sessionId } =
+        action.payload;
       const newConversation = {
         id: conversationId,
         loading: true,
@@ -218,6 +236,7 @@ export function chatReducer(state: IModelConversation[], action: ChatAction): IM
                 errorMsg: '',
                 firstTokenTime: 0,
                 inputTokens: 0,
+                messageChunks: [],
                 outputTokens: 0,
                 totalTime: 0,
               },
@@ -234,7 +253,7 @@ export function chatReducer(state: IModelConversation[], action: ChatAction): IM
         return [
           {
             conversations: [newConversation],
-            id: selectedModelId || modelId,
+            id: modelId,
             name: '-',
             sessionId: sessionId || '',
           },
@@ -266,7 +285,60 @@ export function chatReducer(state: IModelConversation[], action: ChatAction): IM
                 ? {
                     ...answer,
                     content: fullContent,
-                    messageChunks: mergeTextChunk(answer.messageChunks || [], chunk),
+                    messageChunks: appendMessageChunk(answer.messageChunks, {
+                      content: chunk,
+                      type: 'ASSISTANT',
+                    }),
+                  }
+                : answer,
+            ),
+          };
+        },
+        () => ({ loading: false }),
+      );
+    }
+
+    case 'APPEND_THINKING': {
+      const { content, conversationId, modelId, questionId } = action.payload;
+      return updateQuestion(state, modelId, conversationId, questionId, (question) => {
+        const lastIdx = question.answers.length - 1;
+        return {
+          ...question,
+          answers: question.answers.map((answer, idx) =>
+            idx === lastIdx
+              ? {
+                  ...answer,
+                  messageChunks: appendMessageChunk(answer.messageChunks, {
+                    content,
+                    type: 'THINKING',
+                  }),
+                }
+              : answer,
+          ),
+        };
+      });
+    }
+
+    case 'ADD_IMAGE': {
+      const { conversationId, fullContent, image, modelId, questionId } = action.payload;
+      return updateQuestion(
+        state,
+        modelId,
+        conversationId,
+        questionId,
+        (question) => {
+          const lastIdx = question.answers.length - 1;
+          return {
+            ...question,
+            answers: question.answers.map((answer, idx) =>
+              idx === lastIdx
+                ? {
+                    ...answer,
+                    content: fullContent,
+                    messageChunks: appendMessageChunk(answer.messageChunks, {
+                      ...image,
+                      type: 'IMAGE',
+                    }),
                   }
                 : answer,
             ),
@@ -278,11 +350,6 @@ export function chatReducer(state: IModelConversation[], action: ChatAction): IM
 
     case 'ADD_TOOL_CALL': {
       const { conversationId, modelId, questionId, toolCall } = action.payload;
-      const toolCallChunk: IMessageChunk = {
-        id: `chunk-tc-${toolCall.id}`,
-        toolCall,
-        type: 'tool_call',
-      };
       return updateQuestion(state, modelId, conversationId, questionId, (question) => {
         const lastIdx = question.answers.length - 1;
         return {
@@ -292,7 +359,12 @@ export function chatReducer(state: IModelConversation[], action: ChatAction): IM
               ? {
                   ...answer,
                   mcpToolCalls: [...(answer.mcpToolCalls || []), toolCall],
-                  messageChunks: [...(answer.messageChunks || []), toolCallChunk],
+                  messageChunks: appendMessageChunk(answer.messageChunks, {
+                    arguments: toolCall.arguments,
+                    id: toolCall.id,
+                    name: toolCall.name,
+                    type: 'TOOL_CALL',
+                  }),
                 }
               : answer,
           ),
@@ -302,11 +374,6 @@ export function chatReducer(state: IModelConversation[], action: ChatAction): IM
 
     case 'ADD_TOOL_RESPONSE': {
       const { conversationId, modelId, questionId, toolResponse } = action.payload;
-      const toolResultChunk: IMessageChunk = {
-        id: `chunk-tr-${toolResponse.id}`,
-        toolResult: toolResponse,
-        type: 'tool_result',
-      };
       return updateQuestion(state, modelId, conversationId, questionId, (question) => {
         const lastIdx = question.answers.length - 1;
         return {
@@ -316,7 +383,12 @@ export function chatReducer(state: IModelConversation[], action: ChatAction): IM
               ? {
                   ...answer,
                   mcpToolResponses: [...(answer.mcpToolResponses || []), toolResponse],
-                  messageChunks: [...(answer.messageChunks || []), toolResultChunk],
+                  messageChunks: appendMessageChunk(answer.messageChunks, {
+                    id: toolResponse.id,
+                    name: toolResponse.name,
+                    result: toolResponse.result,
+                    type: 'TOOL_RESULT',
+                  }),
                 }
               : answer,
           ),
@@ -353,31 +425,6 @@ export function chatReducer(state: IModelConversation[], action: ChatAction): IM
       );
     }
 
-    case 'ERROR': {
-      const { conversationId, errorMsg, fullContent, modelId, questionId } = action.payload;
-      return updateQuestion(
-        state,
-        modelId,
-        conversationId,
-        questionId,
-        (question) => ({
-          ...question,
-          answers: [
-            ...question.answers,
-            {
-              content: fullContent,
-              errorMsg,
-              firstTokenTime: 0,
-              inputTokens: 0,
-              outputTokens: 0,
-              totalTime: 0,
-            },
-          ],
-        }),
-        () => ({ loading: false }),
-      );
-    }
-
     case 'CHANGE_ACTIVE_ANSWER': {
       const { conversationId, direction, modelId, questionId } = action.payload;
       return updateQuestion(state, modelId, conversationId, questionId, (question) => {
@@ -389,38 +436,6 @@ export function chatReducer(state: IModelConversation[], action: ChatAction): IM
         }
         return { ...question, activeAnswerIndex: newIndex };
       });
-    }
-
-    case 'ADD_MODELS': {
-      const { modelIds, selectedModelId, sessionId } = action.payload;
-      if (state.length === 0) {
-        return [
-          { conversations: [], id: selectedModelId || '', name: '', sessionId: sessionId || '' },
-          ...modelIds.map((id) => ({
-            conversations: [],
-            id,
-            name: '',
-            sessionId: sessionId || '',
-          })),
-        ];
-      }
-      return [
-        ...state.map((model) => ({
-          ...model,
-          conversations: [] as IModelConversation['conversations'],
-          sessionId: sessionId || '',
-        })),
-        ...modelIds.map((id) => ({
-          conversations: [] as IModelConversation['conversations'],
-          id,
-          name: '',
-          sessionId: sessionId || '',
-        })),
-      ];
-    }
-
-    case 'CLOSE_MODEL': {
-      return state.filter((model) => model.id !== action.payload.modelId);
     }
 
     case 'SET_LOADING': {
@@ -446,7 +461,7 @@ export function chatReducer(state: IModelConversation[], action: ChatAction): IM
     }
 
     case 'REGENERATE_CHUNK': {
-      const { chunk, conversationId, fullContent, lastIdx, modelId, questionId } = action.payload;
+      const { chunk, conversationId, fullContent, modelId, questionId } = action.payload;
       return updateQuestion(
         state,
         modelId,
@@ -454,33 +469,21 @@ export function chatReducer(state: IModelConversation[], action: ChatAction): IM
         questionId,
         (question) => {
           const lastAnswerIdx = question.answers.length - 1;
-          const ans =
-            lastIdx !== -1
-              ? question.answers.map((answer, idx) =>
-                  idx !== lastAnswerIdx
-                    ? answer
-                    : {
-                        ...answer,
-                        content: fullContent,
-                        messageChunks: mergeTextChunk(answer.messageChunks || [], chunk),
-                      },
-                )
-              : [
-                  ...question.answers,
-                  {
-                    content: fullContent,
-                    errorMsg: '',
-                    firstTokenTime: 0,
-                    inputTokens: 0,
-                    messageChunks: mergeTextChunk([], chunk),
-                    outputTokens: 0,
-                    totalTime: 0,
-                  },
-                ];
           return {
             ...question,
-            activeAnswerIndex: ans.length - 1,
-            answers: ans,
+            activeAnswerIndex: lastAnswerIdx,
+            answers: question.answers.map((answer, idx) =>
+              idx !== lastAnswerIdx
+                ? answer
+                : {
+                    ...answer,
+                    content: fullContent,
+                    messageChunks: appendMessageChunk(answer.messageChunks, {
+                      content: chunk,
+                      type: 'ASSISTANT',
+                    }),
+                  },
+            ),
           };
         },
         () => ({ loading: false }),
@@ -517,49 +520,45 @@ export function chatReducer(state: IModelConversation[], action: ChatAction): IM
         modelId,
         conversationId,
         questionId,
-        (question) => ({
-          ...question,
-          answers: [
-            {
-              content: fullContent,
-              errorMsg,
-              firstTokenTime: 0,
-              inputTokens: 0,
-              outputTokens: 0,
-              totalTime: 0,
-            },
-          ],
-        }),
+        (question) => {
+          const lastIdx = question.answers.length - 1;
+          return {
+            ...question,
+            activeAnswerIndex: lastIdx,
+            answers: question.answers.map((answer, idx) =>
+              idx === lastIdx
+                ? {
+                    ...answer,
+                    content: fullContent || answer.content,
+                    errorMsg,
+                  }
+                : answer,
+            ),
+          };
+        },
         () => ({ loading: false }),
       );
     }
 
     case 'GLOBAL_ERROR': {
-      return state.map((model) => ({
-        ...model,
-        conversations: model.conversations.map((con) => ({
-          ...con,
-          loading: false,
-          questions: con.questions.map((question, idx) => {
-            if (idx === con.questions.length - 1) {
-              return {
-                ...question,
-                answers: [
-                  {
-                    content: '',
-                    errorMsg: action.payload.errorMsg,
-                    firstTokenTime: 0,
-                    inputTokens: 0,
-                    outputTokens: 0,
-                    totalTime: 0,
-                  },
-                ],
-              };
-            }
-            return question;
-          }),
-        })),
-      }));
+      const { conversationId, errorMsg, modelId, questionId } = action.payload;
+      return updateQuestion(
+        state,
+        modelId,
+        conversationId,
+        questionId,
+        (question) => {
+          const lastIdx = question.answers.length - 1;
+          return {
+            ...question,
+            activeAnswerIndex: lastIdx,
+            answers: question.answers.map((answer, idx) =>
+              idx === lastIdx ? { ...answer, errorMsg } : answer,
+            ),
+          };
+        },
+        () => ({ loading: false }),
+      );
     }
 
     default:

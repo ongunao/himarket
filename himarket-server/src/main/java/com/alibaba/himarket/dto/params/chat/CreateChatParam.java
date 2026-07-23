@@ -80,11 +80,11 @@ public class CreateChatParam implements InputConverter<Chat> {
     private Boolean stream = true;
 
     /**
-     * If need memory
+     * If need thinking/reasoning chunks.
      */
-    private Boolean needMemory = true;
+    private boolean enableThinking = false;
 
-    private Boolean enableWebSearch = false;
+    private boolean enableWebSearch = false;
 
     private String searchType = "";
 }

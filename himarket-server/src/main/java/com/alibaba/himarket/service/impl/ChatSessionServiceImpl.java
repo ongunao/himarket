@@ -377,8 +377,8 @@ public class ChatSessionServiceImpl implements ChatSessionService {
                             .sequence(entry.getKey())
                             .answerId(chat.getAnswerId())
                             .content(chat.getAnswer())
+                            .messageChunks(chat.getMessageChunks())
                             .usage(chat.getChatUsage())
-                            .toolCalls(chat.getToolCalls())
                             .build());
         }
         return answers;

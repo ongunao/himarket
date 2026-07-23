@@ -1,13 +1,21 @@
-import { SendOutlined, FileImageOutlined, FileOutlined, PlusOutlined } from '@ant-design/icons';
+import {
+  BulbOutlined,
+  CloseOutlined,
+  SendOutlined,
+  FileImageOutlined,
+  FileOutlined,
+  PlusOutlined,
+} from '@ant-design/icons';
 import { Dropdown, message, Tooltip } from 'antd';
-import { useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import APIs, { type IProductDetail, type IAttachment } from '../../lib/apis';
+import APIs, { type IProductDetail, type IAttachment, type IChatAttachment } from '../../lib/apis';
 import { Global, Mcp } from '../icon';
 import { AttachmentPreview } from './AttachmentPreview';
 import SendButton from '../send-button';
 
+import type { IGeneratedImage } from '../../types';
 import type { MenuProps } from 'antd';
 
 type UploadedAttachment = IAttachment & { url?: string };
@@ -19,10 +27,15 @@ interface InputBoxProps {
   isMcpExecuting?: boolean;
   showWebSearch: boolean;
   webSearchEnabled: boolean;
+  showThinking: boolean;
+  thinkingEnabled: boolean;
   enableMultiModal?: boolean;
+  sourceImage?: IGeneratedImage;
   onWebSearchEnable: (enabled: boolean) => void;
+  onThinkingEnable: (enabled: boolean) => void;
   onMcpClick?: () => void;
-  onSendMessage: (content: string, attachments: IAttachment[]) => void;
+  onClearSourceImage?: () => void;
+  onSendMessage: (content: string, attachments: IChatAttachment[]) => void;
   onStop?: () => void;
 }
 
@@ -32,11 +45,16 @@ export function InputBox(props: InputBoxProps) {
     enableMultiModal = false,
     isLoading = false,
     mcpEnabled = false,
+    onClearSourceImage,
     onMcpClick,
     onSendMessage,
     onStop,
+    onThinkingEnable,
     onWebSearchEnable,
+    showThinking,
     showWebSearch,
+    sourceImage,
+    thinkingEnabled,
     webSearchEnabled,
   } = props;
   const { t } = useTranslation('chat');
@@ -45,7 +63,14 @@ export function InputBox(props: InputBoxProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const currentUploadType = useRef<string>('');
+
+  useEffect(() => {
+    if (sourceImage) {
+      textareaRef.current?.focus();
+    }
+  }, [sourceImage]);
 
   const uploadItems: MenuProps['items'] = [
     ...(enableMultiModal
@@ -175,9 +200,20 @@ export function InputBox(props: InputBoxProps) {
 
   const handleSend = () => {
     if ((input.trim() || attachments.length > 0) && !isLoading) {
-      onSendMessage(input.trim(), attachments);
+      const messageAttachments: IChatAttachment[] = attachments.map(({ attachmentId }) => ({
+        attachmentId,
+      }));
+      if (
+        sourceImage &&
+        !messageAttachments.some(
+          (attachment) => attachment.attachmentId === sourceImage.attachmentId,
+        )
+      ) {
+        messageAttachments.unshift({ attachmentId: sourceImage.attachmentId });
+      }
+      onSendMessage(input.trim(), messageAttachments);
       setInput('');
-      // 清除预览 URL
+      // Revoke local preview URLs.
       attachments.forEach((file) => {
         if (file.url && file.url.startsWith('blob:')) {
           URL.revokeObjectURL(file.url);
@@ -199,10 +235,10 @@ export function InputBox(props: InputBoxProps) {
   return (
     <div
       aria-label={t('input.dropArea')}
-      className={`relative flex flex-col justify-center rounded-[16px] border bg-white/85 p-2 shadow-[0_12px_34px_rgba(37,56,88,0.06)] transition-all duration-200 focus-within:border-colorPrimary/25 focus-within:bg-white ${
+      className={`relative flex flex-col justify-center rounded-[16px] border bg-[#FAFBFD]/95 p-2 shadow-[0_10px_28px_rgba(55,68,94,0.065)] transition-all duration-200 focus-within:border-colorPrimary/20 focus-within:bg-[#FCFCFE] focus-within:shadow-[0_12px_30px_rgba(55,68,94,0.085)] ${
         isDragging
           ? 'scale-[1.01] border-dashed border-colorPrimary ring-4 ring-colorPrimary/10'
-          : 'border-[#DDE5F0]'
+          : 'border-transparent'
       }`}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -218,12 +254,30 @@ export function InputBox(props: InputBoxProps) {
       />
 
       <input className="hidden" onChange={handleFileChange} ref={fileInputRef} type="file" />
-      <div className="min-h-[80px] w-full rounded-[12px] p-3 pb-11">
+      <div className="flex min-h-[80px] w-full items-start gap-3 rounded-[12px] p-3 pb-11">
+        {sourceImage && (
+          <div className="relative flex-shrink-0">
+            <AttachmentPreview
+              attachments={[{ attachmentId: sourceImage.attachmentId }]}
+              itemClassName="!h-12 !w-12 !min-w-12 rounded-[9px] ring-1 ring-gray-200"
+            />
+            <button
+              aria-label={t('input.cancelImageEdit')}
+              className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm transition-colors hover:bg-gray-50 hover:text-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-colorPrimary/25"
+              onClick={onClearSourceImage}
+              title={t('input.cancelImageEdit')}
+              type="button"
+            >
+              <CloseOutlined className="text-[9px]" />
+            </button>
+          </div>
+        )}
         <textarea
           className="min-h-[40px] w-full resize-none bg-transparent text-[15px] leading-6 text-gray-900 placeholder:text-gray-400 focus:outline-none"
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={t('input.placeholder')}
+          placeholder={sourceImage ? t('input.imageEditPlaceholder') : t('input.placeholder')}
+          ref={textareaRef}
           rows={2}
           value={input}
         />
@@ -239,7 +293,7 @@ export function InputBox(props: InputBoxProps) {
             trigger={['click']}
           >
             <button
-              className="flex h-9 w-9 items-center justify-center rounded-[10px] text-gray-500 transition-all duration-200 hover:bg-gray-100 hover:text-gray-800 active:scale-[0.98]"
+              className="flex h-9 w-9 items-center justify-center rounded-[10px] text-gray-500 transition-all duration-200 hover:bg-[#EBEEF4] hover:text-gray-800 active:scale-[0.98]"
               type="button"
             >
               <PlusOutlined className="text-base text-subTitle" />
@@ -254,6 +308,17 @@ export function InputBox(props: InputBoxProps) {
                 className={`w-4 h-4 ${webSearchEnabled ? 'fill-colorPrimary' : 'fill-subTitle'}`}
               />
               <span className="text-sm text-subTitle">{t('input.webSearch')}</span>
+            </ToolButton>
+          )}
+          {showThinking && (
+            <ToolButton
+              enabled={thinkingEnabled}
+              onClick={() => onThinkingEnable(!thinkingEnabled)}
+            >
+              <BulbOutlined
+                className={`text-base ${thinkingEnabled ? 'text-colorPrimary' : 'text-subTitle'}`}
+              />
+              <span className="text-sm text-subTitle">{t('input.thinking')}</span>
             </ToolButton>
           )}
           <ToolButton enabled={mcpEnabled} onClick={onMcpClick}>
@@ -293,7 +358,7 @@ function ToolButton({
 }) {
   return (
     <button
-      className={`flex h-9 cursor-pointer items-center justify-center gap-2 rounded-[10px] px-3 text-gray-600 transition-all duration-200 hover:bg-gray-100 hover:text-gray-900 active:scale-[0.98] ${enabled ? 'bg-colorPrimaryBgHover text-colorPrimary' : ''}`}
+      className={`flex h-9 cursor-pointer items-center justify-center gap-2 rounded-[10px] px-3 text-gray-600 transition-all duration-200 hover:bg-[#EBEEF4] hover:text-gray-900 active:scale-[0.98] ${enabled ? 'bg-colorPrimarySoft text-colorPrimary' : ''}`}
       onClick={onClick}
       type="button"
     >

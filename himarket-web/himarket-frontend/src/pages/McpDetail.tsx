@@ -372,10 +372,17 @@ function McpDetail() {
 
   const leftContent = data ? (
     <ProductDetailTabs
+      appearance="mcp"
       defaultActiveKey="overview"
       items={[
         {
-          children: <ProductOverview content={data.document} emptyText={t('empty.overview')} />,
+          children: (
+            <ProductOverview
+              appearance="market"
+              content={data.document}
+              emptyText={t('empty.overview')}
+            />
+          ),
           key: 'overview',
           label: (
             <ProductDetailTabLabel icon={<FileTextOutlined />}>
@@ -451,7 +458,7 @@ function McpDetail() {
                 ))}
               </div>
             ) : (
-              <EmptyState description={t('empty.tools')} />
+              <EmptyState className="min-h-[340px]" description={t('empty.tools')} />
             ),
           key: 'tools',
           label: (
@@ -482,18 +489,18 @@ function McpDetail() {
   );
 
   const connectionPanel = (
-    <div className="rounded-[12px] border border-[#E8EDF5] bg-[#FBFCFE] p-4">
+    <div className="px-1 py-2">
       <div className="flex items-start gap-3">
         <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[12px] bg-colorPrimaryBg text-colorPrimary">
           <LinkOutlined className="text-base" />
         </div>
         <div className="min-w-0">
-          <div className="text-sm font-semibold text-gray-950">{t('connection.title')}</div>
-          <p className="mt-1 text-sm leading-6 text-gray-600">{t('connection.description')}</p>
+          <div className="text-sm font-semibold text-[#303A4A]">{t('connection.title')}</div>
+          <p className="mt-1 text-sm leading-6 text-[#667184]">{t('connection.description')}</p>
         </div>
       </div>
 
-      <div className="mt-4 space-y-3 border-t border-[#E8EDF5] pt-3">
+      <div className="mt-4 space-y-3 border-t border-[#E6EAF0] pt-3">
         <div>
           <div className="mb-2 text-xs font-semibold text-gray-500">{t('connection.protocol')}</div>
           {protocolOptions.length > 0 ? (
@@ -605,7 +612,7 @@ function McpDetail() {
   );
 
   const configPanel = (
-    <div className="rounded-[12px] border border-[#E8EDF5] bg-[#FBFCFE] p-4">
+    <div className="px-1 py-1">
       {configProtocol !== 'stdio' && (
         <div className="mb-3">
           <div className="mb-2 text-xs font-semibold text-gray-500">{t('connection.domain')}</div>
@@ -679,13 +686,13 @@ function McpDetail() {
   const rightContent = (
     <>
       {mcpConfig && (
-        <section className="rounded-[14px] border border-[#DDE5F0] bg-white/90 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.05)] backdrop-blur-sm">
-          <div className="mb-3 flex rounded-lg bg-gray-100 p-1">
+        <section className="rounded-[12px] border border-[#E0E5ED] bg-white/70 p-3.5 backdrop-blur-xl">
+          <div className="mb-3 flex rounded-[9px] bg-[#F1F3F7] p-1">
             <button
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-xs transition-all ${
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-xs transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-colorPrimary/20 ${
                 rightPanelTab === 'connection'
-                  ? 'bg-white font-medium text-gray-800 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-white/90 font-medium text-[#4B5668]'
+                  : 'text-[#7D8796] hover:text-[#4B5668]'
               }`}
               onClick={() => setRightPanelTab('connection')}
               type="button"
@@ -694,10 +701,10 @@ function McpDetail() {
               {t('connection.infoTab')}
             </button>
             <button
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-xs transition-all ${
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-xs transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-colorPrimary/20 ${
                 rightPanelTab === 'config'
-                  ? 'bg-white font-medium text-gray-800 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-white/90 font-medium text-[#4B5668]'
+                  : 'text-[#7D8796] hover:text-[#4B5668]'
               }`}
               onClick={() => setRightPanelTab('config')}
               type="button"
@@ -714,6 +721,7 @@ function McpDetail() {
 
   return (
     <ProductDetailLayout
+      appearance="mcp"
       error={error || (!data ? t('error.dataLoadFailed') : undefined)}
       headerProps={
         data

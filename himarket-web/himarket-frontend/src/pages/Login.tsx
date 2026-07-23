@@ -1,5 +1,5 @@
-import { UserOutlined, LockOutlined } from '@ant-design/icons';
-import { Form, Input, Button, message, Divider } from 'antd';
+import { LockOutlined, UserOutlined } from '@ant-design/icons';
+import { Button, Form, Input, message } from 'antd';
 import { AxiosError } from 'axios';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,9 +15,9 @@ import request from '../lib/request';
 import type { IIdpProvider } from '../lib/apis';
 
 const oidcIcons: Record<string, React.ReactNode> = {
-  aliyun: <img alt="Aliyun" className="w-6 h-6 mr-2" src={aliyunIcon} />,
-  github: <img alt="GitHub" className="w-6 h-6 mr-2" src={githubIcon} />,
-  google: <img alt="Google" className="w-5 h-5 mr-2" src={googleIcon} />,
+  aliyun: <img alt="Aliyun" className="h-5 w-5 object-contain" src={aliyunIcon} />,
+  github: <img alt="GitHub" className="h-5 w-5 object-contain" src={githubIcon} />,
+  google: <img alt="Google" className="h-5 w-5 object-contain" src={googleIcon} />,
 };
 
 const Login: React.FC = () => {
@@ -90,54 +90,55 @@ const Login: React.FC = () => {
   };
 
   return (
-    <Layout>
-      <div className="min-h-[calc(100vh-96px)] w-full flex items-center justify-center">
-        <div className="w-full max-w-md mx-4">
-          {/* 登录卡片 */}
-          <div className="bg-white backdrop-blur-sm rounded-[10px] p-8 shadow-lg">
-            <div className="mb-8">
-              <h2 className="text-[32px] flex text-gray-900">
+    <Layout backgroundVariant="market">
+      <div className="flex min-h-[calc(100dvh-96px)] w-full items-center justify-center py-8 sm:py-12">
+        <div className="mx-4 w-full max-w-[440px]">
+          <div className="rounded-[14px] border border-[#E1E3EB] bg-white/[0.66] p-6 shadow-[0_12px_40px_rgba(67,72,104,0.06)] backdrop-blur-[18px] sm:p-8">
+            <div className="mb-7">
+              <h1 className="m-0 flex items-baseline text-[28px] font-semibold leading-9 text-[#303747] antialiased">
                 <span className="text-colorPrimary">{t('greeting')}</span>
-                {t('hello')}
-              </h2>
-              <p className="text-sm text-[#85888D]">{t('welcomeMessage')}</p>
+                <span>{t('hello')}</span>
+              </h1>
+              <p className="mt-1.5 text-sm leading-6 text-[#737C8E]">{t('welcomeMessage')}</p>
             </div>
 
-            {/* 账号密码登录表单 */}
             <Form
               autoComplete="off"
+              className="[&_.ant-form-item-explain-error]:text-xs"
               layout="vertical"
               name="login"
               onFinish={handlePasswordLogin}
               size="large"
             >
               <Form.Item
+                className="!mb-4"
                 name="username"
                 rules={[{ message: t('usernameRequired'), required: true }]}
               >
                 <Input
                   autoComplete="username"
-                  className="rounded-lg"
+                  className="h-11 rounded-[8px] border-[#DDE0E8] bg-white/65 px-3 shadow-none hover:border-[#CBC8EA] focus-within:border-[#8A84EE] focus-within:shadow-[0_0_0_3px_rgba(104,99,235,0.10)]"
                   placeholder={t('usernamePlaceholder')}
-                  prefix={<UserOutlined className="text-gray-400" />}
+                  prefix={<UserOutlined className="mr-1 text-[#969DAB]" />}
                 />
               </Form.Item>
 
               <Form.Item
+                className="!mb-5"
                 name="password"
                 rules={[{ message: t('passwordRequired'), required: true }]}
               >
                 <Input.Password
                   autoComplete="current-password"
-                  className="rounded-lg"
+                  className="h-11 rounded-[8px] border-[#DDE0E8] bg-white/65 px-3 shadow-none hover:border-[#CBC8EA] focus-within:border-[#8A84EE] focus-within:shadow-[0_0_0_3px_rgba(104,99,235,0.10)]"
                   placeholder={t('passwordPlaceholder')}
-                  prefix={<LockOutlined className="text-gray-400" />}
+                  prefix={<LockOutlined className="mr-1 text-[#969DAB]" />}
                 />
               </Form.Item>
 
-              <Form.Item>
+              <Form.Item className="!mb-0">
                 <Button
-                  className="w-full rounded-lg h-10"
+                  className="h-11 w-full rounded-[8px] border-0 bg-[#6863EB] text-sm font-medium shadow-none hover:!bg-[#5D58DE]"
                   htmlType="submit"
                   loading={loading}
                   size="large"
@@ -147,32 +148,34 @@ const Login: React.FC = () => {
                 </Button>
               </Form.Item>
             </Form>
-            {/* 分隔线 */}
+
             {providers.length > 0 && (
-              <Divider className="text-subTitle" plain>
-                <span className="text-subTitle">{t('or')}</span>
-              </Divider>
+              <div className="my-5 flex items-center gap-3" role="separator">
+                <span className="h-px flex-1 bg-[#E4E5EB]" />
+                <span className="text-xs text-[#8A91A0]">{t('or')}</span>
+                <span className="h-px flex-1 bg-[#E4E5EB]" />
+              </div>
             )}
-            {/* OIDC 登录按钮 */}
-            <div className="flex flex-col gap-2 mb-2">
+
+            <div className="flex flex-col gap-2.5">
               {providers.length === 0
                 ? null
                 : providers.map((provider) => (
                     <Button
-                      className="w-full flex items-center justify-center"
-                      icon={oidcIcons[provider.provider.toLowerCase()] || <span></span>}
+                      className="flex h-10 w-full items-center justify-center rounded-[8px] border-[#E0E2EA] bg-white/40 text-sm font-medium text-[#424A5A] shadow-none hover:!border-[#D0CEE8] hover:!bg-white/65 hover:!text-[#424A5A]"
+                      icon={oidcIcons[provider.provider.toLowerCase()]}
                       key={provider.provider}
                       onClick={() => handleOidcLogin(provider.provider)}
-                      size="large"
                     >
                       {t('loginWithProvider', { provider: provider.name || provider.provider })}
                     </Button>
                   ))}
             </div>
-            <div className="text-center text-subTitle">
+
+            <div className="mt-5 text-center text-sm text-[#737C8E]">
               {t('noAccount')}
               <Link
-                className="text-colorPrimary hover:text-colorPrimary hover:underline"
+                className="ml-1 font-medium text-[#6863E3] transition-colors hover:text-[#514BCB]"
                 to="/register"
               >
                 {t('registerLink')}

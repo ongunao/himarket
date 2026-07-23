@@ -1,5 +1,4 @@
 import {
-  ArrowLeftOutlined,
   DownloadOutlined,
   CopyOutlined,
   CheckOutlined,
@@ -19,8 +18,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 
 import { ProductIconRenderer } from '../components/icon/ProductIconRenderer';
 import { Layout } from '../components/Layout';
-import 'highlight.js/styles/github.css';
 import { SkillWorkerDetailSkeleton } from '../components/loading';
+import MarkdownRender from '../components/MarkdownRender';
+import 'highlight.js/styles/github.css';
 import { ProductDetailTabLabel, ProductDetailTabs } from '../components/ProductDetailTabs';
 import { ProductOverview } from '../components/ProductOverview';
 import SkillFileTree from '../components/skill/SkillFileTree';
@@ -145,6 +145,7 @@ function SkillDetail() {
   const { skillProductId } = useParams<{ skillProductId: string }>();
   const navigate = useNavigate();
   const { i18n, t } = useTranslation('skillDetail');
+  const { t: tHeader } = useTranslation('header');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [data, setData] = useState<IProductDetail>();
@@ -337,7 +338,7 @@ function SkillDetail() {
 
   if (loading) {
     return (
-      <Layout>
+      <Layout backgroundVariant="market">
         <SkillWorkerDetailSkeleton />
       </Layout>
     );
@@ -345,7 +346,7 @@ function SkillDetail() {
 
   if (error || !data) {
     return (
-      <Layout>
+      <Layout backgroundVariant="market">
         <div className="p-8">
           <Alert
             description={error || t('skillNotExist')}
@@ -432,24 +433,22 @@ function SkillDetail() {
         <div className="text-gray-400 text-center py-16 text-sm">{t('binaryNotSupported')}</div>
       );
     }
+    const displayContent = fileContent.content.trimEnd();
     if (selectedFilePath.endsWith('.md')) {
       const highlighted = (() => {
         try {
           if (hljs.getLanguage('markdown')) {
-            return hljs.highlight(fileContent.content, { language: 'markdown' }).value;
+            return hljs.highlight(displayContent, { language: 'markdown' }).value;
           }
-          return hljs.highlightAuto(fileContent.content).value;
+          return hljs.highlightAuto(displayContent).value;
         } catch {
-          return fileContent.content
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
+          return displayContent.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
       })();
-      const lineCount = fileContent.content.split('\n').length;
+      const lineCount = displayContent.split('\n').length;
       const codeFont = "'Menlo', 'Monaco', 'Courier New', monospace";
       return (
-        <div className="relative flex h-full flex-1 flex-col overflow-auto bg-white">
+        <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white">
           {/* Toggle button - floats top-right */}
           <div className="absolute right-3 top-2 z-20">
             <Tooltip title={mdRawMode ? t('renderPreview') : t('sourceCode')}>
@@ -464,7 +463,7 @@ function SkillDetail() {
             </Tooltip>
           </div>
           {mdRawMode ? (
-            <div className="flex flex-1 overflow-auto">
+            <div className="flex min-h-0 flex-1 overflow-auto overscroll-contain">
               <div
                 className="sticky left-0 z-10 flex-shrink-0 select-none bg-white py-3 pl-4 pr-3 text-right"
                 style={{
@@ -482,11 +481,19 @@ function SkillDetail() {
               </div>
               <pre
                 className="m-0 flex-1 bg-white py-3 pl-5 pr-4"
-                style={{ fontFamily: codeFont, fontSize: '13px', lineHeight: '20px' }}
+                style={{
+                  alignSelf: 'flex-start',
+                  fontFamily: codeFont,
+                  fontSize: '13px',
+                  lineHeight: '20px',
+                  minHeight: '100%',
+                  overflow: 'visible',
+                }}
               >
                 <code
                   className="hljs language-markdown"
                   dangerouslySetInnerHTML={{ __html: highlighted }}
+                  style={{ overflow: 'visible', padding: 0 }}
                 />
               </pre>
             </div>
@@ -505,22 +512,19 @@ function SkillDetail() {
     const highlighted = (() => {
       try {
         if (lang && lang !== 'plaintext' && hljs.getLanguage(lang)) {
-          return hljs.highlight(fileContent.content, { language: lang }).value;
+          return hljs.highlight(displayContent, { language: lang }).value;
         }
-        return hljs.highlightAuto(fileContent.content).value;
+        return hljs.highlightAuto(displayContent).value;
       } catch {
-        return fileContent.content
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;');
+        return displayContent.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       }
     })();
 
-    const lineCount = fileContent.content.split('\n').length;
+    const lineCount = displayContent.split('\n').length;
     const codeFont = "'Menlo', 'Monaco', 'Courier New', monospace";
 
     return (
-      <div className="h-full flex-1 overflow-auto bg-white">
+      <div className="h-full min-h-0 flex-1 overflow-auto overscroll-contain bg-white">
         <div className="flex min-h-full">
           <div
             className="sticky left-0 z-10 flex-shrink-0 select-none bg-white py-3 pl-4 pr-3 text-right"
@@ -540,9 +544,12 @@ function SkillDetail() {
           <pre
             className="m-0 flex-1 bg-white py-3 pl-5 pr-4"
             style={{
+              alignSelf: 'flex-start',
               fontFamily: codeFont,
               fontSize: '13px',
               lineHeight: '20px',
+              minHeight: '100%',
+              overflow: 'visible',
               whiteSpace: 'pre',
               wordBreak: 'normal',
             }}
@@ -550,7 +557,7 @@ function SkillDetail() {
             <code
               className="hljs"
               dangerouslySetInnerHTML={{ __html: highlighted }}
-              style={{ background: 'transparent', padding: 0 }}
+              style={{ background: 'transparent', overflow: 'visible', padding: 0 }}
             />
           </pre>
         </div>
@@ -559,40 +566,48 @@ function SkillDetail() {
   };
 
   return (
-    <Layout>
-      <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-5 py-5 sm:py-7">
+    <Layout backgroundVariant="market">
+      <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-4 px-4 py-4 sm:px-6 sm:py-5">
         {/* Page header */}
         <div className="flex-shrink-0">
-          <button
-            className="mb-4 inline-flex h-9 items-center gap-2 rounded-[10px] px-3 text-sm font-medium text-gray-600 transition-all duration-200 hover:bg-white/80 hover:text-gray-950 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-colorPrimary/30 active:translate-y-px"
-            onClick={() => navigate(-1)}
-            type="button"
+          <nav
+            aria-label={t('back')}
+            className="mb-4 flex h-9 min-w-0 items-center gap-3 px-1 text-sm"
           >
-            <ArrowLeftOutlined className="text-xs" />
-            <span>{t('back')}</span>
-          </button>
+            <button
+              className="font-medium text-[#778190] transition-colors hover:text-[#4B5668] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-colorPrimary/20"
+              onClick={() => navigate('/skills')}
+              type="button"
+            >
+              {tHeader('tabs.skills')}
+            </button>
+            <span aria-hidden="true" className="text-[#A3ABB7]">
+              /
+            </span>
+            <span className="min-w-0 truncate font-medium text-[#303A4A]">{name}</span>
+          </nav>
 
-          <div className="rounded-[14px] border border-[#DDE5F0] bg-white/90 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)] backdrop-blur-sm">
+          <div className="border-b border-[#E2E6ED] px-1 pb-4 pt-1">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex min-w-0 items-start gap-4">
                   {data.icon && data.icon.value ? (
-                    <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-[12px] border border-[#E1E7F0] bg-[#F7F9FC]">
+                    <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-[12px] bg-[#F1F3F7]">
                       <ProductIconRenderer
                         className="h-full w-full object-cover"
                         iconType={getIconString(data.icon)}
                       />
                     </div>
                   ) : (
-                    <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-[12px] border border-[#E1E7F0] bg-[#F7F9FC] text-colorPrimary">
+                    <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-[12px] bg-[#F1F3F7] text-colorPrimary">
                       <ThunderboltOutlined className="text-2xl" />
                     </div>
                   )}
 
                   <div className="min-w-0 flex-1">
-                    <h1 className="text-2xl font-semibold leading-tight text-gray-950">{name}</h1>
+                    <h1 className="text-xl font-semibold leading-tight text-[#303A4A]">{name}</h1>
 
-                    <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[#778190]">
                       {headerMetaItems.map((item, index) => (
                         <span className="min-w-0 truncate" key={`${item}-${index}`}>
                           {item}
@@ -608,9 +623,7 @@ function SkillDetail() {
               </div>
 
               {description && (
-                <p className="m-0 max-w-5xl break-words text-sm leading-6 text-gray-600">
-                  {description}
-                </p>
+                <MarkdownRender content={description} variant="product-description" />
               )}
             </div>
           </div>
@@ -622,13 +635,15 @@ function SkillDetail() {
           <div className="min-w-0 flex-1">
             <ProductDetailTabs
               activeKey={activeTab}
+              appearance="skill"
               cardClassName="flex flex-col"
               fillHeight
               items={[
                 {
                   children: (
                     <ProductOverview
-                      className="h-full min-h-[420px]"
+                      appearance="market"
+                      className="h-[calc(100dvh-280px)] min-h-[520px] max-h-[760px]"
                       content={overviewContent}
                       emptyText={t('noSkillMd')}
                       loading={overviewLoading}
@@ -644,10 +659,10 @@ function SkillDetail() {
                 },
                 {
                   children: (
-                    <div className="flex h-full min-h-0 overflow-hidden rounded-[10px] border border-[#E8EEF6]">
+                    <div className="flex h-[calc(100dvh-280px)] min-h-[520px] max-h-[760px] overflow-hidden rounded-[10px] border border-[#E8EEF6]">
                       {/* File tree */}
                       <div
-                        className="scrollbar-thin-soft flex-shrink-0 overflow-y-auto overflow-x-hidden border-r border-[#E8EEF6] bg-[#FBFCFE] p-2"
+                        className="scrollbar-thin-soft flex-shrink-0 overflow-y-auto overflow-x-hidden overscroll-contain border-r border-[#E8EEF6] bg-[#FBFCFE] p-2"
                         style={{ width: treeWidth }}
                       >
                         {hasFiles ? (
@@ -670,7 +685,7 @@ function SkillDetail() {
                         role="separator"
                       />
                       {/* File preview */}
-                      <div className="flex min-w-0 flex-1 flex-col overflow-auto">
+                      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
                         {renderFilePreview()}
                       </div>
                     </div>
@@ -690,8 +705,8 @@ function SkillDetail() {
 
           {/* Right sidebar: download card */}
           <div className="order-1 w-full flex-shrink-0 xl:order-2 xl:sticky xl:top-24 xl:w-[390px] xl:self-start">
-            <div className="overflow-hidden rounded-[14px] border border-[#DDE5F0] bg-white/90 shadow-[0_18px_50px_rgba(15,23,42,0.05)] backdrop-blur-sm">
-              <div className="border-b border-[#E8EEF6] bg-[#FBFCFE] p-3">
+            <div className="overflow-hidden rounded-[12px] border border-[#E0E5ED] bg-white/70 backdrop-blur-xl">
+              <div className="border-b border-[#E6EAF0] bg-white/35 p-3">
                 <div className="mb-1.5 text-xs font-semibold text-gray-500">{t('version')}</div>
                 <div className="flex items-center gap-2">
                   <Select

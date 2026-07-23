@@ -45,14 +45,12 @@ export function ChangePasswordForm({ loading = false, onSubmit }: ChangePassword
   };
 
   return (
-    <section className="mt-4">
-      <div className="flex min-h-16 flex-col gap-3 border-b border-gray-100 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="text-sm font-medium text-gray-800">{t('passwordPanelTitle')}</div>
-        </div>
+    <section className="mt-5">
+      <div className="flex min-h-16 flex-col gap-3 rounded-[10px] border border-[#E1E3EB] bg-white/25 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-sm font-medium text-[#4D5565]">{t('passwordPanelTitle')}</div>
         {!editing && (
           <Button
-            className="w-fit transition-transform active:scale-[0.98]"
+            className="h-9 w-fit rounded-[8px] border-0 px-3.5 text-sm font-medium shadow-none transition-transform active:scale-[0.98]"
             onClick={() => setEditing(true)}
             type="primary"
           >
@@ -62,9 +60,9 @@ export function ChangePasswordForm({ loading = false, onSubmit }: ChangePassword
       </div>
 
       {editing && (
-        <div className="py-5">
+        <div className="mt-4 rounded-[10px] border border-[#E1E3EB] bg-white/25 p-4 sm:p-5">
           <Form
-            className="mx-auto max-w-[420px] [&_.ant-form-item]:!mb-3"
+            className="max-w-[460px] [&_.ant-form-item]:!mb-3"
             form={form}
             onFinish={handleFinish}
             requiredMark={false}
@@ -75,9 +73,9 @@ export function ChangePasswordForm({ loading = false, onSubmit }: ChangePassword
             >
               <Input.Password
                 autoComplete="current-password"
-                className="h-9 rounded-lg"
+                className="h-10 rounded-[8px] border-[#E0E2EA] bg-white/70"
                 placeholder={t('currentPassword')}
-                prefix={<LockOutlined className="text-gray-400" />}
+                prefix={<LockOutlined className="text-[#949BA8]" />}
               />
             </Form.Item>
 
@@ -91,9 +89,9 @@ export function ChangePasswordForm({ loading = false, onSubmit }: ChangePassword
             >
               <Input.Password
                 autoComplete="new-password"
-                className="h-9 rounded-lg"
+                className="h-10 rounded-[8px] border-[#E0E2EA] bg-white/70"
                 placeholder={t('newPassword')}
-                prefix={<KeyOutlined className="text-gray-400" />}
+                prefix={<KeyOutlined className="text-[#949BA8]" />}
               />
             </Form.Item>
 
@@ -115,16 +113,16 @@ export function ChangePasswordForm({ loading = false, onSubmit }: ChangePassword
             >
               <Input.Password
                 autoComplete="new-password"
-                className="h-9 rounded-lg"
+                className="h-10 rounded-[8px] border-[#E0E2EA] bg-white/70"
                 placeholder={t('confirmPassword')}
-                prefix={<SafetyCertificateOutlined className="text-gray-400" />}
+                prefix={<SafetyCertificateOutlined className="text-[#949BA8]" />}
               />
             </Form.Item>
-            <div className="mb-3 text-right text-xs text-gray-400">{t('passwordReloginHint')}</div>
+            <div className="mb-3 text-xs text-[#858C9B]">{t('passwordReloginHint')}</div>
 
-            <div className="flex justify-center gap-3 pt-2">
+            <div className="flex justify-start gap-2 pt-2">
               <Button
-                className="w-16 px-0 transition-transform active:scale-[0.98]"
+                className="h-9 min-w-20 rounded-[8px] px-3 shadow-none transition-transform active:scale-[0.98]"
                 disabled={!canSubmit || loading}
                 htmlType="submit"
                 loading={loading}
@@ -132,7 +130,11 @@ export function ChangePasswordForm({ loading = false, onSubmit }: ChangePassword
               >
                 {t('savePassword')}
               </Button>
-              <Button className="w-16 px-0" disabled={loading} onClick={handleCancel}>
+              <Button
+                className="h-9 min-w-20 rounded-[8px] border-[#E0E2EA] bg-white/55 px-3 text-[#626B7C] shadow-none"
+                disabled={loading}
+                onClick={handleCancel}
+              >
                 {t('cancelChangePassword')}
               </Button>
             </div>

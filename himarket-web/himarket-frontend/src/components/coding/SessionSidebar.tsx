@@ -6,9 +6,10 @@ import {
   MoreOutlined,
   CheckOutlined,
   CloseOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
 } from '@ant-design/icons';
 import { message as antdMessage, Spin, Dropdown, Modal } from 'antd';
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -19,6 +20,7 @@ import {
   updateCodingSession,
   type ICodingSession,
 } from '../../lib/apis/codingSession';
+import { portalConfirmProps } from '../../lib/styles';
 
 import type { MenuProps } from 'antd';
 
@@ -232,8 +234,10 @@ export function SessionSidebar({
   // 删除会话
   const handleDeleteSession = (sessionId: string, sessionName: string) => {
     Modal.confirm({
+      ...portalConfirmProps,
       cancelText: t('sidebar.cancel'),
       content: t('sidebar.deleteConfirm', { name: sessionName }),
+      icon: <DeleteOutlined className="portal-confirm-danger-icon" />,
       okText: t('sidebar.delete'),
       okType: 'danger',
       onOk: async () => {
@@ -291,9 +295,9 @@ export function SessionSidebar({
     if (groupSessions.length === 0) return null;
 
     return (
-      <div className="mb-2">
+      <div className="mb-1">
         <button
-          className={`${expandedSections[sectionKey] ? 'bg-white' : ''} sticky top-0 z-10 flex items-center justify-between px-3 py-2 text-sm text-subTitle cursor-pointer hover:bg-white/30 rounded-lg transition-all duration-200 hover:scale-[1.02] backdrop-blur-xl border-0 w-full text-left`}
+          className="sticky top-0 z-10 flex w-full cursor-pointer items-center justify-between rounded-[8px] border-0 bg-[#F1F3F7] px-3 py-1.5 text-left text-xs font-medium text-[#737B89] transition-colors duration-200 hover:bg-[#E9EDF3]"
           onClick={() => toggleSection(sectionKey)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
@@ -303,7 +307,7 @@ export function SessionSidebar({
           }}
           type="button"
         >
-          <span className="font-medium">{title}</span>
+          <span>{title}</span>
           <span
             className={`
               transition-transform duration-300 ease-in-out
@@ -319,20 +323,19 @@ export function SessionSidebar({
             ${expandedSections[sectionKey] ? 'opacity-100 mt-1' : 'max-h-0 opacity-0'}
           `}
         >
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {groupSessions.map((session, index) => {
               const isActive = session.cliSessionId === activeCliSessionId;
               return (
                 <div
                   className={`
-                    px-3 py-2 rounded-lg text-sm
-                    transition-all duration-200 ease-in-out
-                    hover:scale-[1.02] hover:shadow-sm text-mainTitle
+                    min-h-9 rounded-[8px] px-3 py-2 text-sm text-mainTitle
+                    transition-colors duration-200 ease-in-out
                     ${
                       isActive
-                        ? 'bg-colorPrimaryHoverLight font-medium'
+                        ? 'bg-colorPrimarySoft font-medium text-gray-900'
                         : agentSupportsLoadSession || activeCliSessionId === null
-                          ? 'text-gray-600 hover:bg-colorPrimaryHoverLight hover:text-gray-900 cursor-pointer'
+                          ? 'cursor-pointer text-gray-600 hover:bg-colorPrimarySoftHover hover:text-gray-900'
                           : 'text-gray-600 opacity-60'
                     }
                   `}
@@ -452,74 +455,61 @@ export function SessionSidebar({
   /* ========== 收起态 ========== */
   if (collapsed) {
     return (
-      <div className="flex flex-col items-center py-3 px-1 gap-2 flex-shrink-0 bg-white/50 backdrop-blur-xl transition-all duration-300 ease-in-out w-12">
-        {/* 展开按钮 */}
-        <button
-          className="w-8 h-8 flex items-center justify-center rounded-lg
-                     text-gray-400 hover:text-colorPrimary hover:bg-colorPrimaryHoverLight
-                     transition-all duration-200"
-          onClick={() => setCollapsed(false)}
-          title={t('sidebar.expandSidebar')}
-        >
-          <PanelLeftOpen size={16} />
-        </button>
-        {/* 新会话 */}
-        <button
-          className="w-8 h-8 flex items-center justify-center rounded-lg
-                     text-gray-400 hover:text-colorPrimary hover:bg-colorPrimaryHoverLight
-                     transition-all duration-200"
-          onClick={onNewSession}
-          title={t('sidebar.newSession')}
-        >
-          <PlusOutlined className="text-sm" />
-        </button>
+      <div
+        className={`coding-session--sidebar mr-4 flex w-[72px] flex-shrink-0 self-start flex-col rounded-[16px] bg-[#F1F3F7] shadow-[0_10px_28px_rgba(55,68,94,0.05)] transition-all duration-300 ease-in-out ${sessions.length > 0 ? 'h-full min-h-0' : ''}`}
+      >
+        <div className="p-4">
+          <button
+            className="flex h-10 w-10 items-center justify-center rounded-[10px] border border-transparent bg-[#F5F6FA] transition-colors hover:bg-[#F0F2F7]"
+            onClick={onNewSession}
+            title={t('sidebar.newSession')}
+            type="button"
+          >
+            <PlusOutlined className="text-sm" />
+          </button>
+        </div>
+        <div className="flex-1" />
+        <div className="px-4 pb-4 pt-2">
+          <button
+            className="mx-auto flex h-10 w-10 items-center justify-center rounded-[8px] text-gray-600 transition-colors hover:bg-[#E3E8EF]"
+            onClick={() => setCollapsed(false)}
+            title={t('sidebar.expandSidebar')}
+            type="button"
+          >
+            <MenuUnfoldOutlined />
+          </button>
+        </div>
       </div>
     );
   }
 
   /* ========== 展开态 ========== */
   return (
-    <div className="bg-white/50 backdrop-blur-xl flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out w-64 coding-session--sidebar">
-      {/* 顶部操作栏：收起 + 新会话 */}
-      <div className="flex items-center gap-2 p-3">
+    <div
+      className={`coding-session--sidebar mr-4 flex w-[260px] flex-shrink-0 self-start flex-col rounded-[16px] bg-[#F1F3F7] shadow-[0_10px_28px_rgba(55,68,94,0.05)] transition-all duration-300 ease-in-out ${sessions.length > 0 ? 'h-full min-h-0' : ''}`}
+    >
+      <div className="p-4">
         <button
-          className="w-8 h-8 flex items-center justify-center rounded-lg flex-shrink-0
-                     text-gray-400 hover:text-colorPrimary hover:bg-colorPrimaryHoverLight
-                     transition-all duration-200"
-          onClick={() => setCollapsed(true)}
-          title={t('sidebar.collapseSidebar')}
-        >
-          <PanelLeftClose size={16} />
-        </button>
-        <button
-          className="flex-1 flex items-center justify-between bg-white rounded-lg
-                     border-[3px] border-colorPrimaryBgHover/50 px-3 py-1.5
-                     transition-all duration-200 ease-in-out
-                     hover:bg-gray-50 hover:shadow-md hover:scale-[1.02] active:scale-95
-                     text-nowrap overflow-hidden"
+          className="group flex h-10 w-full items-center justify-between overflow-hidden text-nowrap rounded-[10px] border border-transparent bg-[#F5F6FA] px-3 transition-colors duration-200 ease-in-out hover:bg-[#F0F2F7]"
           onClick={onNewSession}
+          type="button"
         >
           <div className="flex items-center gap-2">
             <PlusOutlined className="text-sm" />
-            <span className="text-sm font-medium">{t('sidebar.newSession')}</span>
+            <span className="text-sm font-semibold text-[#4F5A6A]">{t('sidebar.newSession')}</span>
           </div>
-          <div className="flex items-center gap-1 text-xs text-gray-400">
-            <kbd className="px-1 py-0.5 bg-gray-100 rounded text-[10px] font-sans">
-              {isMac ? '⇧' : 'Shift'}
-            </kbd>
-            <kbd className="px-1 py-0.5 bg-gray-100 rounded text-[10px] font-sans">
-              {isMac ? '⌘' : 'Ctrl'}
-            </kbd>
-            <kbd className="px-1 py-0.5 bg-gray-100 rounded text-[10px] font-sans">O</kbd>
-          </div>
+          <kbd className="font-sans text-[13px] leading-none text-[#8D96A5] opacity-70 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+            {isMac ? '⇧⌘O' : 'Shift Ctrl O'}
+          </kbd>
         </button>
       </div>
 
-      {/* 分隔线 */}
-      <div className="h-[1px] bg-[#e5e5e5] mx-3 mb-1"></div>
+      <div className="mx-4 mb-2 h-px bg-[#D9DFE8]" />
 
       {/* 历史会话列表 */}
-      <div className="flex-1 overflow-y-auto px-3 pb-3 sidebar-content">
+      <div
+        className={`sidebar-content px-4 pb-4 ${sessions.length > 0 ? 'min-h-0 flex-1 overflow-y-auto' : ''}`}
+      >
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <Spin />
@@ -541,6 +531,18 @@ export function SessionSidebar({
           {t('sidebar.restoreUnsupported')}
         </div>
       )}
+
+      <div className="px-4 pb-4 pt-2">
+        <button
+          className="flex w-full items-center justify-start gap-2 overflow-hidden text-nowrap rounded-[8px] px-3 py-2 text-gray-600 transition-colors hover:bg-[#E3E8EF]"
+          onClick={() => setCollapsed(true)}
+          title={t('sidebar.collapseSidebar')}
+          type="button"
+        >
+          <MenuFoldOutlined />
+          <span className="text-sm">{t('sidebar.collapseSidebar')}</span>
+        </button>
+      </div>
     </div>
   );
 }

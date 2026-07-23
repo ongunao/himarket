@@ -219,19 +219,20 @@ function AgentDetail() {
 
   const leftContent = data ? (
     <ProductDetailTabs
+      appearance="agent"
       defaultActiveKey="overview"
       items={[
         {
           children: data?.document ? (
-            <div className="scrollbar-thin-soft max-h-[720px] min-h-[420px] overflow-y-auto pr-2">
+            <div className="scrollbar-thin-soft max-h-[720px] min-h-[340px] overflow-y-auto pr-2">
               <MarkdownRender content={data.document} />
             </div>
           ) : (
-            <div className="flex min-h-[420px] flex-col items-center justify-center rounded-[12px] border border-dashed border-[#DDE5F0] bg-[#FBFCFE] py-16">
-              <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-gray-100">
-                <InboxOutlined className="text-base text-gray-400" />
+            <div className="flex min-h-[340px] flex-col items-center justify-center py-12">
+              <div className="mb-2.5 flex h-10 w-10 items-center justify-center rounded-full bg-[#F1F3F7]">
+                <InboxOutlined className="text-base text-[#98A1AF]" />
               </div>
-              <div className="text-sm text-gray-500">{t('empty.overview')}</div>
+              <div className="text-sm font-medium text-[#7D8796]">{t('empty.overview')}</div>
             </div>
           ),
           key: 'overview',
@@ -246,7 +247,7 @@ function AgentDetail() {
             <div className="space-y-6">
               {/* Basic information */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="rounded-[12px] border border-[#E8EDF5] bg-[#FBFCFE] p-4">
+                <div className="rounded-[10px] bg-[#F5F6F9] p-4">
                   <div className="mb-1 text-sm text-gray-500">{t('field.protocol')}</div>
                   <div className="text-sm font-medium text-gray-900">
                     {agentProtocols.length > 0 ? agentProtocols.join(', ') : t('field.noProtocol')}
@@ -437,7 +438,7 @@ function AgentDetail() {
 
                   {agentDomainOptions.length > 0 && (
                     <div className="mb-4">
-                      <div className="flex overflow-hidden rounded-[10px] border border-[#DDE5F0] bg-white">
+                      <div className="flex overflow-hidden rounded-[10px] border border-[#E1E5EC] bg-[#F9FAFC]">
                         <span className="flex flex-shrink-0 items-center whitespace-nowrap border-r border-[#E8EDF5] bg-[#FBFCFE] px-3 py-2 text-xs font-medium text-gray-600">
                           {t('route.domain')}:
                         </span>
@@ -488,7 +489,7 @@ function AgentDetail() {
                     </div>
                   )}
 
-                  <div className="overflow-hidden rounded-[12px] border border-[#DDE5F0] bg-white">
+                  <div className="overflow-hidden rounded-[10px] border border-[#E1E5EC] bg-[#F9FAFC]">
                     <Collapse expandIconPosition="end" ghost>
                       {agentRoutes.map((route, index) => (
                         <Panel
@@ -618,11 +619,11 @@ function AgentDetail() {
               )}
             </div>
           ) : (
-            <div className="flex min-h-[420px] flex-col items-center justify-center rounded-[12px] border border-dashed border-[#DDE5F0] bg-[#FBFCFE] py-16">
-              <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-gray-100">
-                <InboxOutlined className="text-base text-gray-400" />
+            <div className="flex min-h-[340px] flex-col items-center justify-center py-12">
+              <div className="mb-2.5 flex h-10 w-10 items-center justify-center rounded-full bg-[#F1F3F7]">
+                <InboxOutlined className="text-base text-[#98A1AF]" />
               </div>
-              <div className="text-sm text-gray-500">{t('empty.configuration')}</div>
+              <div className="text-sm font-medium text-[#7D8796]">{t('empty.configuration')}</div>
             </div>
           ),
           key: 'configuration',
@@ -650,24 +651,24 @@ function AgentDetail() {
 
   const usagePanel = (
     <div>
-      <div className="rounded-[12px] border border-[#E8EDF5] bg-[#FBFCFE] p-4">
+      <div className="px-1 py-2">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[12px] bg-colorPrimaryBg text-colorPrimary">
             <RobotOutlined className="text-base" />
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-semibold text-gray-950">{t('usage.title')}</div>
-            <p className="mt-1 text-sm leading-6 text-gray-600">{t('usage.description')}</p>
+            <div className="text-sm font-semibold text-[#303A4A]">{t('usage.title')}</div>
+            <p className="mt-1 text-sm leading-6 text-[#667184]">{t('usage.description')}</p>
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[#E8EDF5] pt-3">
+        <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[#E6EAF0] pt-3">
           {agentFeatureLabels.map((feature) => (
             <div
               className="flex min-w-0 items-center gap-2 text-xs font-medium text-gray-600"
               key={feature}
             >
-              <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-colorPrimaryBg text-colorPrimary shadow-[0_0_0_3px_rgba(99,102,241,0.08)]">
+              <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-colorPrimaryBg text-colorPrimary">
                 <CheckCircleFilled className="text-[9px]" />
               </span>
               <span className="min-w-0 truncate">{feature}</span>
@@ -678,7 +679,7 @@ function AgentDetail() {
 
       <Button
         block
-        className="mt-4 !h-10 !rounded-[10px] !border-none !bg-gray-100 !font-semibold !text-gray-500"
+        className="mt-3 !h-9 !rounded-[9px] !border-none !bg-[#F1F3F7] !font-medium !text-[#8A93A1]"
         disabled
         size="large"
       >
@@ -713,13 +714,13 @@ function AgentDetail() {
   );
 
   const rightContent = (
-    <section className="rounded-[14px] border border-[#DDE5F0] bg-white/90 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.05)] backdrop-blur-sm">
-      <div className="mb-3 flex rounded-lg bg-gray-100 p-1">
+    <section className="rounded-[12px] border border-[#E0E5ED] bg-white/70 p-3.5 backdrop-blur-xl">
+      <div className="mb-3 flex rounded-[9px] bg-[#F1F3F7] p-1">
         <button
-          className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-xs transition-all ${
+          className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-xs transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-colorPrimary/20 ${
             rightPanelTab === 'usage'
-              ? 'bg-white font-medium text-gray-800 shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-white/90 font-medium text-[#4B5668]'
+              : 'text-[#7D8796] hover:text-[#4B5668]'
           }`}
           onClick={() => setRightPanelTab('usage')}
           type="button"
@@ -728,10 +729,10 @@ function AgentDetail() {
           {t('usage.tab')}
         </button>
         <button
-          className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-xs transition-all ${
+          className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-xs transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-colorPrimary/20 ${
             rightPanelTab === 'request'
-              ? 'bg-white font-medium text-gray-800 shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-white/90 font-medium text-[#4B5668]'
+              : 'text-[#7D8796] hover:text-[#4B5668]'
           }`}
           onClick={() => setRightPanelTab('request')}
           type="button"
@@ -746,6 +747,7 @@ function AgentDetail() {
 
   return (
     <ProductDetailLayout
+      appearance="agent"
       error={error || (!data ? t('error.agentNotFound') : undefined)}
       headerProps={
         data

@@ -16,8 +16,11 @@ export interface ISession {
   updateAt: string;
 }
 
-export interface IAttachment {
+export interface IChatAttachment {
   attachmentId: string;
+}
+
+export interface IAttachment extends IChatAttachment {
   name: string;
   type: 'IMAGE' | 'VIDEO' | 'AUDIO' | 'TEXT';
   mimeType: string;
@@ -32,12 +35,10 @@ export interface IChatMessage {
   conversationId: string;
   questionId: string;
   question: string;
-  attachments?: {
-    attachmentId: string;
-  }[];
+  attachments?: IChatAttachment[];
   stream?: boolean;
-  needMemory?: boolean;
   enableThinking?: boolean;
+  enableWebSearch?: boolean;
   searchType?: string;
 }
 
@@ -55,7 +56,7 @@ export interface IAnswer {
 export interface IQuestion {
   questionId: string;
   content: string;
-  attachments: { attachmentId: string }[];
+  attachments: IChatAttachment[];
   answers: IAnswer[];
 }
 
@@ -66,20 +67,7 @@ export interface IConversation {
 
 // ============ MCP 工具调用相关类型 ============
 
-// @chat-legacy: This interface is no longer used
-// export interface IToolMeta {
-//   toolName: string;           // 工具名称
-//   toolNameCn?: string | null; // 工具中文名称
-//   mcpName: string;            // MCP server 名称
-//   mcpNameCn?: string | null;  // MCP server 中文名称
-// }
-
 export interface IToolCall {
-  // @chat-legacy: Legacy fields removed - use mcpServerName and arguments instead
-  // toolMeta?: IToolMeta;
-  // inputSchema?: string;
-  // input?: string;
-
   id: string; // 工具调用唯一 ID
   type: string; // 通常为 "function"
   name: string; // 工具函数名
@@ -88,11 +76,6 @@ export interface IToolCall {
 }
 
 export interface IToolResponse {
-  // @chat-legacy: Legacy fields removed - use result instead
-  // toolMeta?: IToolMeta;
-  // output?: string;
-  // responseData?: string;
-
   id: string; // 工具调用唯一 ID
   name: string; // 工具函数名
   result?: unknown; // 工具执行结果
@@ -108,26 +91,19 @@ export interface IChatUsage {
 
 // ============ V2 版本数据结构 ============
 
-export interface IToolCallInfo {
-  id: string;
-  name: string;
-  arguments: unknown;
-  mcpServerName?: string;
-  result?: unknown;
-}
-
 export interface IAnswerV2 {
   sequence: number;
+  answerId?: string;
   content: string;
+  messageChunks?: string;
   usage?: IChatUsage;
-  toolCalls?: IToolCallInfo[];
 }
 
 export interface IQuestionV2 {
   questionId: string;
   content: string;
   createdAt: string;
-  attachments: { attachmentId: string }[];
+  attachments: IChatAttachment[];
   answers: IAnswerV2[];
 }
 
@@ -260,11 +236,16 @@ export interface IAttachmentContent extends IAttachment {
   data: string;
 }
 
+interface GetAttachmentOptions {
+  suppressErrorMessage?: boolean;
+}
+
 /**
  * 获取附件内容
  */
-export function getAttachment(attachmentId: string) {
+export function getAttachment(attachmentId: string, options: GetAttachmentOptions = {}) {
   return request.get<RespI<IAttachmentContent>, RespI<IAttachmentContent>>(
     `/attachments/${attachmentId}`,
+    options,
   );
 }

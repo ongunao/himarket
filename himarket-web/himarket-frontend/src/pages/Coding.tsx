@@ -3,7 +3,6 @@ import { Code2, Eye, FolderOpen, Folder } from 'lucide-react';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import bgImage from '../assets/bg.png';
 import { ChatStream } from '../components/coding/ChatStream';
 import { CodingInput } from '../components/coding/CodingInput';
 import { ConfigDropdowns, ModelSelector } from '../components/coding/ConfigDropdowns';
@@ -16,8 +15,7 @@ import { PlanDisplay } from '../components/coding/PlanDisplay';
 import { PreviewPanel } from '../components/coding/PreviewPanel';
 import { SessionSidebar } from '../components/coding/SessionSidebar';
 import { TerminalPanel } from '../components/coding/TerminalPanel';
-import { Header } from '../components/Header';
-import TextType from '../components/TextType';
+import { Layout } from '../components/Layout';
 import { WelcomeView } from '../components/WelcomeView';
 import {
   CodingSessionProvider,
@@ -796,79 +794,48 @@ function CodingContent() {
     />
   );
 
-  // ===== 欢迎页：使用 HiChat 风格布局 =====
+  // ===== 欢迎页 =====
   if (showWelcome) {
     return (
-      <>
-        <div className="flex flex-1 min-h-0 overflow-hidden">
-          {/* 左侧常驻会话侧栏 */}
-          {sessionSidebar}
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        {sessionSidebar}
 
-          {/* 居中欢迎页 */}
-          <div className="flex-1 flex flex-col">
-            <div className="flex-1 flex flex-col items-center justify-center px-4">
-              <div className="max-w-2xl w-full">
-                {/* 欢迎标题 */}
-                <div className="text-center mb-8">
-                  <div
-                    className="mx-auto mb-4 w-20 h-20 rounded-[10px] flex items-center justify-center shadow-lg"
-                    style={{
-                      background:
-                        'linear-gradient(135deg, rgba(99,102,241,1) 0%, rgba(139,92,246,1) 100%)',
-                    }}
-                  >
-                    <Code2 className="text-white" size={40} />
-                  </div>
-                  <h1 className="text-2xl font-medium text-gray-900 mb-2">
-                    {t('page.welcomePrefix')}{' '}
-                    <span className="text-blue-500">
-                      <TextType
-                        cursorCharacter="_"
-                        loop={false}
-                        showCursor={true}
-                        text={['HiCoding']}
-                        typingSpeed={80}
-                      />
-                    </span>
-                  </h1>
-                  <p className="text-sm text-gray-400">{t('page.welcomeDescription')}</p>
-                </div>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="relative z-10 flex min-h-14 items-center px-4 py-2.5 sm:px-5">
+            <ModelSelector config={config} onConfigChange={setConfig} />
+          </div>
 
-                {/* 输入框 - 渐变边框包裹 */}
-                <div className="mb-4">
-                  <div
-                    className="p-[2px] rounded-[10px] shadow-md"
-                    style={{
-                      background:
-                        'linear-gradient(256deg, rgba(234, 228, 248, 1) 36%, rgba(215, 229, 243, 1) 100%)',
-                    }}
-                  >
-                    <div className="rounded-[10px] overflow-hidden bg-white/95">
-                      {/* 模型选择器 - 对话框左上角 */}
-                      <div className="px-4 pt-3 pb-0">
-                        <ModelSelector config={config} onConfigChange={setConfig} />
-                      </div>
-                      <CodingInput
-                        disabled={!isComplete}
-                        isProcessing={false}
-                        onCancel={() => {}}
-                        onDropQueuedPrompt={() => {}}
-                        onSend={handleWelcomeSend}
-                        queuedPrompts={[]}
-                        queueSize={0}
-                        toolbarExtra={
-                          <ConfigDropdowns config={config} hideModel onConfigChange={setConfig} />
-                        }
-                        variant="welcome"
-                      />
-                    </div>
-                  </div>
-                </div>
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-5 pb-10">
+            <div className="w-full max-w-[920px]">
+              <div className="mb-7 text-center">
+                <h1 className="m-0 text-[28px] font-medium leading-10 text-[#303747] antialiased">
+                  {t('page.welcomePrefix')}{' '}
+                  <span className="hi-chat-brand-glow font-semibold text-[#818CF8]">HiCoding</span>
+                </h1>
+                <p className="mt-2 text-sm leading-6 text-[#737C8E]">
+                  {t('page.welcomeDescription')}
+                </p>
+              </div>
+
+              <div className="mx-auto max-w-[760px] overflow-hidden rounded-[14px] border border-[#DFE2E9] bg-white/[0.58] shadow-[0_12px_40px_rgba(67,72,104,0.05)] backdrop-blur-[18px]">
+                <CodingInput
+                  disabled={!isComplete}
+                  isProcessing={false}
+                  onCancel={() => {}}
+                  onDropQueuedPrompt={() => {}}
+                  onSend={handleWelcomeSend}
+                  queuedPrompts={[]}
+                  queueSize={0}
+                  toolbarExtra={
+                    <ConfigDropdowns config={config} hideModel onConfigChange={setConfig} />
+                  }
+                  variant="welcome"
+                />
               </div>
             </div>
           </div>
         </div>
-      </>
+      </div>
     );
   }
 
@@ -1059,25 +1026,9 @@ function Coding() {
 
   if (!isLoggedIn) {
     return (
-      <div className="flex flex-col min-h-screen">
-        <div
-          className="fixed w-full h-full z-[1]"
-          style={{
-            backgroundAttachment: 'fixed',
-            backgroundImage: `url(${bgImage})`,
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            backgroundSize: 'cover',
-          }}
-        />
-        <div className="fixed w-full h-full z-[2]" style={{ backdropFilter: 'blur(204px)' }} />
-        <div className="relative z-10 flex-shrink-0">
-          <Header />
-        </div>
-        <div className="flex-1 relative z-10 px-8">
-          <WelcomeView type="coding" />
-        </div>
-      </div>
+      <Layout backgroundVariant="market">
+        <WelcomeView type="coding" />
+      </Layout>
     );
   }
 
@@ -1095,34 +1046,12 @@ function Coding() {
  *  因此这里用同一个 DOM 结构 + CSS 切换来实现两种布局。
  */
 function CodingShell() {
-  const state = useCodingState();
-  const activeSession = useActiveCodingSession();
-
-  const isWelcomePhase = Object.keys(state.sessions).length === 0 && !activeSession;
-
   return (
-    <div
-      className={`flex flex-col overflow-hidden ${isWelcomePhase ? 'min-h-screen' : 'h-screen'}`}
-    >
-      {/* 背景层：始终显示，保持统一视觉效果 */}
-      <div
-        className="fixed w-full h-full z-[1]"
-        style={{
-          backgroundAttachment: 'fixed',
-          backgroundImage: `url(${bgImage})`,
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          backgroundSize: 'cover',
-        }}
-      />
-      <div className="fixed w-full h-full z-[2]" style={{ backdropFilter: 'blur(204px)' }} />
-      <div className="relative z-10 flex-shrink-0">
-        <Header />
-      </div>
-      <div className={`flex-1 min-h-0 relative z-10 flex flex-col ${isWelcomePhase ? 'px-8' : ''}`}>
+    <Layout backgroundVariant="market" className="h-screen overflow-hidden">
+      <div className="flex h-[calc(100dvh-76px)] min-h-0 flex-col py-4">
         <CodingContent />
       </div>
-    </div>
+    </Layout>
   );
 }
 

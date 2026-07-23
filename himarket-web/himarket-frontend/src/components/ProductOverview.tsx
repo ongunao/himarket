@@ -4,6 +4,7 @@ import MarkdownRender from './MarkdownRender';
 import { parseSkillMd } from '../lib/skillMdUtils';
 
 interface ProductOverviewProps {
+  appearance?: 'default' | 'market';
   className?: string;
   content?: string | null;
   emptyText: string;
@@ -59,17 +60,26 @@ function renderContent(content: string, showFrontmatterTable: boolean) {
 }
 
 export function ProductOverview({
+  appearance = 'default',
   className,
   content,
   emptyText,
   loading = false,
   showFrontmatterTable = false,
 }: ProductOverviewProps) {
-  const rootClassName = classNames(
-    'scrollbar-thin-soft overflow-y-auto',
-    className ?? 'max-h-[720px] min-h-[420px] pr-2',
-  );
+  const isMarketAppearance = appearance === 'market';
   const hasContent = Boolean(content?.trim());
+  const rootClassName = classNames(
+    'scrollbar-thin-soft overflow-y-auto overscroll-contain',
+    className ??
+      (hasContent
+        ? isMarketAppearance
+          ? 'max-h-[clamp(520px,calc(100dvh-280px),1080px)] min-h-[340px] pr-2'
+          : 'max-h-[clamp(520px,calc(100dvh-280px),1080px)] min-h-[420px] pr-2'
+        : isMarketAppearance
+          ? 'min-h-[200px]'
+          : 'min-h-[240px]'),
+  );
 
   if (loading) {
     return (
@@ -84,11 +94,31 @@ export function ProductOverview({
   if (!hasContent || !content) {
     return (
       <div className={rootClassName}>
-        <div className="flex min-h-[420px] flex-col items-center justify-center rounded-[12px] border border-dashed border-[#DDE5F0] bg-[#FBFCFE] py-16">
-          <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-gray-100">
-            <InboxOutlined className="text-base text-gray-400" />
+        <div
+          className={
+            isMarketAppearance
+              ? 'flex min-h-[200px] flex-col items-center justify-center py-10'
+              : 'flex min-h-[240px] flex-col items-center justify-center rounded-[12px] border border-dashed border-[#DDE5F0] bg-[#FBFCFE] py-12'
+          }
+        >
+          <div
+            className={`flex h-10 w-10 items-center justify-center rounded-full ${
+              isMarketAppearance ? 'mb-2.5 bg-[#F1F3F7]' : 'mb-2 bg-gray-100'
+            }`}
+          >
+            <InboxOutlined
+              className={
+                isMarketAppearance ? 'text-base text-[#98A1AF]' : 'text-base text-gray-400'
+              }
+            />
           </div>
-          <div className="text-sm text-gray-500">{emptyText}</div>
+          <div
+            className={
+              isMarketAppearance ? 'text-sm font-medium text-[#7D8796]' : 'text-sm text-gray-500'
+            }
+          >
+            {emptyText}
+          </div>
         </div>
       </div>
     );

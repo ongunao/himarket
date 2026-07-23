@@ -562,15 +562,15 @@ export function ModelSelector({ config, onConfigChange }: ModelSelectorProps) {
       trigger="click"
     >
       <button
-        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg
-                   text-gray-500 text-[13px] cursor-pointer
-                   hover:bg-gray-50 transition-all"
+        className="inline-flex cursor-pointer items-center gap-1.5 rounded-[8px]
+                   bg-[#F1F0F8]/80 px-2.5 py-1.5 text-[13px] text-[#596273]
+                   transition-colors hover:bg-[#EAE8F5]"
       >
-        <Sparkles className="text-indigo-400 flex-shrink-0" size={13} />
-        <span className="text-gray-700 font-medium">
+        <Sparkles className="flex-shrink-0 text-[#817BE8]" size={13} />
+        <span className="font-medium text-[#4B5464]">
           {config.modelName || t('config.selectModel')}
         </span>
-        <ChevronDown className="text-gray-400 flex-shrink-0" size={12} />
+        <ChevronDown className="flex-shrink-0 text-[#8A92A0]" size={12} />
       </button>
     </Popover>
   );

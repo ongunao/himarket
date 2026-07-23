@@ -20,6 +20,7 @@
 package com.alibaba.himarket.service.hichat.service;
 
 import com.alibaba.himarket.dto.result.chat.LlmInvokeResult;
+import com.alibaba.himarket.dto.result.model.ModelConfigResult;
 import com.alibaba.himarket.service.hichat.support.ChatEvent;
 import com.alibaba.himarket.service.hichat.support.InvokeModelParam;
 import com.alibaba.himarket.support.enums.AIProtocol;
@@ -46,10 +47,17 @@ public interface LlmService {
     List<AIProtocol> getProtocols();
 
     /**
-     * Check if this service supports the given protocol
+     * Get the model category supported by this service.
      *
-     * @param protocol protocol string to match (case-insensitive)
+     * @return model category, such as TEXT or Image
+     */
+    String getModelCategory();
+
+    /**
+     * Check if this service supports the model API configuration.
+     *
+     * @param modelAPIConfig model category, protocols, and routes
      * @return true if supported
      */
-    boolean match(String protocol);
+    boolean match(ModelConfigResult.ModelAPIConfig modelAPIConfig);
 }

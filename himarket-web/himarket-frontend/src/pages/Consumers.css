@@ -1,0 +1,42 @@
+.consumer-management-table .ant-table,
+.consumer-management-table .ant-table-container {
+  background: transparent;
+}
+
+.consumer-management-table .ant-table-thead > tr > th {
+  background: rgba(247, 247, 251, 0.82) !important;
+  border-bottom-color: #e1e3eb !important;
+  color: #596275 !important;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 14px 18px !important;
+}
+
+.consumer-management-table .ant-table-tbody > tr > td {
+  background: rgba(255, 255, 255, 0.38);
+  border-bottom-color: #e6e7ed !important;
+  padding: 16px 18px !important;
+  transition: background-color 180ms ease;
+}
+
+.consumer-management-table .ant-table-tbody > tr:hover > td {
+  background: rgba(250, 250, 253, 0.9) !important;
+  backdrop-filter: none;
+}
+
+.consumer-management-table .ant-table-tbody > tr:last-child > td {
+  border-bottom: 0 !important;
+}
+
+.consumer-management-table .ant-table-tbody > .ant-table-measure-row,
+.consumer-management-table .ant-table-tbody > .ant-table-measure-row > td {
+  height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+}
+
+.consumer-management-table .ant-table-placeholder > td {
+  background: rgba(255, 255, 255, 0.28) !important;
+}

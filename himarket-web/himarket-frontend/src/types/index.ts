@@ -329,20 +329,7 @@ export interface IMessageVersion {
   outputTokens?: number;
 }
 
-// @chat-legacy: This interface is no longer used
-// export interface IMcpToolMeta {
-//   toolName: string;
-//   toolNameCn?: string | null;
-//   mcpName: string;
-//   mcpNameCn?: string | null;
-// }
-
 export interface IMcpToolCall {
-  // @chat-legacy: Legacy fields removed - use mcpServerName and arguments instead
-  // toolMeta?: IMcpToolMeta;
-  // inputSchema?: string;
-  // input?: string;
-
   id: string;
   type: string;
   name: string;
@@ -351,26 +338,26 @@ export interface IMcpToolCall {
 }
 
 export interface IMcpToolResponse {
-  // @chat-legacy: Legacy fields removed - use result instead
-  // toolMeta?: IMcpToolMeta;
-  // output?: string;
-  // responseData?: string;
-
   id: string;
   name: string;
   result?: unknown;
 }
 
-// 消息片段类型 - 用于按顺序展示消息内容和工具调用
-export type MessageChunkType = 'text' | 'tool_call' | 'tool_result';
+export interface IGeneratedImage {
+  attachmentId: string;
+}
 
-// 消息片段 - 按 SSE 事件顺序存储
-export interface IMessageChunk {
-  id: string;
-  type: MessageChunkType;
-  content?: string; // text 类型使用
-  toolCall?: IMcpToolCall; // tool_call 类型使用
-  toolResult?: IMcpToolResponse; // tool_result 类型使用
+export type IChatMessageChunkType =
+  'ASSISTANT' | 'THINKING' | 'IMAGE' | 'TOOL_CALL' | 'TOOL_RESULT';
+
+export interface IChatMessageChunk {
+  type: IChatMessageChunkType;
+  content?: string;
+  id?: string;
+  name?: string;
+  arguments?: unknown;
+  result?: unknown;
+  attachmentId?: string;
 }
 
 export interface IModelConversation {
@@ -396,9 +383,9 @@ export interface IModelConversation {
         totalTime: number;
         inputTokens: number;
         outputTokens: number;
+        messageChunks?: IChatMessageChunk[];
         mcpToolCalls?: IMcpToolCall[];
         mcpToolResponses?: IMcpToolResponse[];
-        messageChunks?: IMessageChunk[]; // 按顺序的消息片段
       }[];
     }[];
   }[];

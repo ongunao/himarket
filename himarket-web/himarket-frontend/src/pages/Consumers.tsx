@@ -1,20 +1,11 @@
 import {
   DeleteOutlined,
-  PlusOutlined,
-  SearchOutlined,
-  ReloadOutlined,
   EditOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
 } from '@ant-design/icons';
-import {
-  Table,
-  Button,
-  Space,
-  Typography,
-  Input,
-  Pagination,
-  type TableColumnType,
-  Select,
-} from 'antd';
+import { Button, Input, Pagination, Select, Table, Tooltip, type TableColumnType } from 'antd';
 import { message, Modal } from 'antd';
 import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,9 +14,10 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { getConsumers, deleteConsumer, createConsumer } from '../lib/apis';
 import APIs, { type IConsumer, type IGetPrimaryConsumerResp } from '../lib/apis';
+import { portalConfirmProps, portalModalStyles } from '../lib/styles';
 import { formatDateTime } from '../lib/utils';
 
-const { Title } = Typography;
+import './Consumers.css';
 
 function ConsumersPage() {
   const { t } = useTranslation(['consumer', 'common']);
@@ -117,6 +109,12 @@ function ConsumersPage() {
 
   const handleDelete = (record: IConsumer) => {
     Modal.confirm({
+      ...portalConfirmProps,
+      cancelText: t('common:cancel'),
+      content: t('deleteConfirm', { name: record.name }),
+      icon: <DeleteOutlined className="portal-confirm-danger-icon" />,
+      okText: t('deleteAction'),
+      okType: 'danger',
       onOk: async () => {
         try {
           await deleteConsumer(record.consumerId);
@@ -126,7 +124,7 @@ function ConsumersPage() {
           // message.error('Delete failed');
         }
       },
-      title: t('deleteConfirm', { name: record.name }),
+      title: t('deleteAction'),
     });
   };
 
@@ -168,13 +166,20 @@ function ConsumersPage() {
       dataIndex: 'name',
       key: 'name',
       render: (name: string, record) => (
-        <div className="flex gap-2 items-center">
-          <div className="font-medium">{name}</div>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Link
+            className="min-w-0 truncate text-sm font-semibold text-[#625DE2] no-underline transition-colors hover:text-[#514BCB] hover:no-underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-colorPrimary/25"
+            title={name}
+            to={`/consumers/${record.consumerId}`}
+          >
+            {name}
+          </Link>
           {record.consumerId === primaryConsumer?.consumerId && (
             <button
-              className="px-2 py-1 gap-2 cursor-pointer rounded-md bg-black/70 text-white flex items-center"
+              className="inline-flex h-7 flex-shrink-0 cursor-pointer items-center gap-1.5 rounded-[7px] bg-[#EFEDFB] px-2.5 text-xs font-medium text-[#655F83] transition-colors hover:bg-[#E8E5F8] hover:text-[#514A75] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-colorPrimary/25"
               onClick={() => {
                 setShowModifyPrimaryConsumerModal(true);
+                setSelectedPrimaryConsumer(primaryConsumer?.consumerId || '');
                 fetchConsumersForSelect(undefined, 1, 1000, true);
               }}
               type="button"
@@ -186,44 +191,44 @@ function ConsumersPage() {
         </div>
       ),
       title: t('columns.consumer'),
-      width: '20%',
+      width: '24%',
     },
     {
       dataIndex: 'createAt',
       key: 'createAt',
-      render: (date: string) => (date ? formatDateTime(date) : '-'),
+      render: (date: string) => (
+        <span className="text-sm tabular-nums text-[#566176]">
+          {date ? formatDateTime(date) : '-'}
+        </span>
+      ),
       title: t('columns.createdAt'),
-      width: '20%',
+      width: '22%',
     },
     {
       dataIndex: 'description',
       key: 'description',
-      render: (description: string) => description || '-',
+      render: (description: string) => (
+        <span className="block truncate text-sm text-[#505B6E]">{description || '-'}</span>
+      ),
       title: t('columns.description'),
-      width: '30%',
+      width: '44%',
     },
     {
+      align: 'center',
       key: 'action',
       render: (_: unknown, record: IConsumer) => (
-        <Space>
-          <Link to={`/consumers/${record.consumerId}`}>
-            <Button className="rounded-lg text-colorPrimary">{t('viewDetails')}</Button>
-          </Link>
-          <Button
-            className="rounded-lg"
-            disabled={record.consumerId === primaryConsumer?.consumerId}
-            icon={
-              <DeleteOutlined
-                className={
-                  record.consumerId === primaryConsumer?.consumerId ? '' : 'text-[#EF4444]'
-                }
-              />
-            }
-            onClick={() => handleDelete(record)}
-          ></Button>
-        </Space>
+        <Button
+          aria-label={t('deleteAction')}
+          className="h-8 w-8 rounded-[7px] border-0 p-0 text-[#E0525E] shadow-none hover:!bg-red-50 hover:!text-[#D94350] disabled:!bg-transparent disabled:!text-gray-300"
+          danger
+          disabled={record.consumerId === primaryConsumer?.consumerId}
+          icon={<DeleteOutlined />}
+          onClick={() => handleDelete(record)}
+          type="text"
+        />
       ),
       title: t('columns.action'),
+      width: '10%',
     },
   ];
 
@@ -232,19 +237,19 @@ function ConsumersPage() {
   }, []);
 
   return (
-    <Layout>
-      <div className="w-full ">
-        <div className="min-h-[calc(100vh-96px)] bg-white backdrop-blur-xl rounded-2xl shadow-xs border border-white/40 p-6">
-          <div className="mb-5">
-            <Title className="text-gray-900" level={2}>
+    <Layout backgroundVariant="market">
+      <div className="w-full py-4 sm:py-6">
+        <section className="min-h-[calc(100dvh-128px)] rounded-[14px] border border-[#E1E3EB] bg-white/[0.62] p-4 backdrop-blur-[14px] sm:p-6">
+          <header className="mb-5">
+            <h1 className="m-0 text-[24px] font-semibold leading-8 text-[#303747]">
               {productId ? t('productSubscriptionsTitle') : t('listTitle')}
-            </Title>
-          </div>
-          <div className="mb-4 flex justify-between items-center">
-            <div className="flex gap-2 items-center">
+            </h1>
+          </header>
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
               {!productId && (
                 <Button
-                  className="rounded-lg"
+                  className="h-9 w-fit rounded-[8px] border-none px-3.5 text-sm font-medium shadow-none"
                   icon={<PlusOutlined />}
                   onClick={() => setAddModalOpen(true)}
                   type="primary"
@@ -254,37 +259,36 @@ function ConsumersPage() {
               )}
               <Input
                 allowClear
-                className="w-80 rounded-lg"
+                className="h-10 w-full max-w-[360px] rounded-[9px] border-[#E0E2EA] bg-white/[0.72] shadow-none hover:border-[#D4D7E1] focus-within:border-colorPrimary/25 focus-within:bg-white"
                 onChange={(e) => setSearchInput(e.target.value)}
                 onPressEnter={() => handleSearch()}
                 placeholder={t('searchPlaceholder')}
                 prefix={<SearchOutlined className="text-gray-400" />}
-                style={{
-                  backdropFilter: 'blur(10px)',
-                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                }}
                 value={searchInput}
               />
             </div>
-            <div>
+            <Tooltip title={t('refresh')}>
               <Button
-                className="rounded-lg"
+                aria-label={t('refresh')}
+                className="h-10 w-10 rounded-[9px] border-[#E1E3EB] bg-white/55 text-[#697386] shadow-none hover:!border-[#D4D7E1] hover:!bg-white/90 hover:!text-[#4F596B]"
                 icon={<ReloadOutlined />}
                 onClick={() => setRefreshIndex((v) => v + 1)}
               />
-            </div>
+            </Tooltip>
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-[#e5e5e5]">
+          <div className="overflow-hidden rounded-[10px] border border-[#E1E3EB] bg-white/45">
             <Table
+              className="consumer-management-table"
               columns={columns}
               dataSource={consumers}
               loading={loading}
               pagination={false}
               rowKey="consumerId"
+              scroll={{ x: 840 }}
             />
           </div>
-          <div className="flex w-full justify-end items-center p-3">
+          <div className="flex min-h-16 w-full items-center justify-end px-1 py-4">
             <Pagination
               {...{
                 current: page,
@@ -300,10 +304,12 @@ function ConsumersPage() {
               }}
             />
           </div>
-        </div>
+        </section>
 
         <Modal
           cancelText={t('common:cancel')}
+          centered
+          className="portal-modal"
           confirmLoading={addLoading}
           okText={t('modal.submit')}
           onCancel={() => {
@@ -312,10 +318,17 @@ function ConsumersPage() {
           }}
           onOk={handleAdd}
           open={addModalOpen}
+          styles={portalModalStyles}
           title={t('modal.addTitle')}
+          width={460}
         >
           <div className="mb-4">
+            <div className="mb-2 text-xs font-medium text-[#697386]">
+              <span className="mr-1 text-red-500">*</span>
+              {t('columns.consumer')}
+            </div>
             <Input
+              className="h-10"
               disabled={addLoading}
               maxLength={50}
               onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))}
@@ -324,7 +337,11 @@ function ConsumersPage() {
             />
           </div>
           <div>
+            <div className="mb-2 text-xs font-medium text-[#697386]">
+              {t('columns.description')}
+            </div>
             <Input.TextArea
+              className="resize-none"
               disabled={addLoading}
               maxLength={64}
               onChange={(e) => setAddForm((f) => ({ ...f, description: e.target.value }))}
@@ -336,33 +353,30 @@ function ConsumersPage() {
         </Modal>
       </div>
       <Modal
-        footer={null}
+        cancelText={t('common:cancel')}
+        centered
+        className="portal-modal"
+        okButtonProps={{ disabled: !selectedPrimaryConsumer }}
+        okText={t('common:confirm')}
         onCancel={() => setShowModifyPrimaryConsumerModal(false)}
+        onOk={handleConfirmModifyPrimaryConsumer}
         open={showModifyPrimaryConsumerModal}
-        width={400}
+        styles={portalModalStyles}
+        title={t('primaryConsumer.title')}
+        width={460}
       >
-        <div className="flex w-full justify-center flex-col gap-4 pt-2">
-          <div className="font-bold text-lg">{t('primaryConsumer.title')}</div>
-          <div>
-            <Select
-              defaultValue={primaryConsumer?.consumerId}
-              filterOption={(input, option) => {
-                return (option?.label ?? '').toLowerCase().includes(input.toLowerCase());
-              }}
-              onChange={setSelectedPrimaryConsumer}
-              options={consumersForSelect.map((v) => ({ label: v.name, value: v.consumerId }))}
-              showSearch
-              style={{ width: '100%' }}
-            />
-          </div>
-          <div className="flex gap-2 justify-end">
-            <Button onClick={handleConfirmModifyPrimaryConsumer} type="primary">
-              {t('common:confirm')}
-            </Button>
-            <Button onClick={() => setShowModifyPrimaryConsumerModal(false)}>
-              {t('common:cancel')}
-            </Button>
-          </div>
+        <div className="pb-1">
+          <div className="mb-2 text-xs font-medium text-[#697386]">{t('columns.consumer')}</div>
+          <Select
+            className="w-full"
+            filterOption={(input, option) => {
+              return (option?.label ?? '').toLowerCase().includes(input.toLowerCase());
+            }}
+            onChange={setSelectedPrimaryConsumer}
+            options={consumersForSelect.map((v) => ({ label: v.name, value: v.consumerId }))}
+            showSearch
+            value={selectedPrimaryConsumer || undefined}
+          />
         </div>
       </Modal>
     </Layout>

@@ -1,12 +1,12 @@
 import {
-  ArrowRightOutlined,
   CalendarOutlined,
   IdcardOutlined,
   MailOutlined,
   SafetyCertificateOutlined,
+  TeamOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Button, Skeleton, Typography, message } from 'antd';
+import { Button, message, Skeleton } from 'antd';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -19,8 +19,6 @@ import { clearCachedUserInfo } from '../lib/userInfoCache';
 import { formatDateTime } from '../lib/utils';
 
 type ProfileSection = 'identity' | 'profile' | 'security';
-
-const { Title } = Typography;
 
 const getInitials = (name: string) => {
   if (!name) return 'U';
@@ -102,24 +100,26 @@ const Profile: React.FC = () => {
   const renderProfileContent = () => (
     <>
       <div>
-        <h1 className="m-0 text-xl font-semibold text-gray-950">{t('profileInfo')}</h1>
-        <p className="mt-2 text-sm leading-6 text-gray-500">{t('profileInfoDescription')}</p>
+        <h2 className="m-0 text-[18px] font-semibold leading-7 text-[#303747]">
+          {t('profileInfo')}
+        </h2>
+        <p className="mt-1.5 text-sm leading-6 text-[#737C8E]">{t('profileInfoDescription')}</p>
       </div>
 
       {loadingProfile ? (
         <Skeleton active className="mt-6" paragraph={{ rows: 6 }} />
       ) : (
-        <dl className="mt-6 grid gap-3 md:grid-cols-2">
+        <dl className="mt-6 overflow-hidden rounded-[10px] border border-[#E1E3EB] bg-white/30">
           {profileFacts.map((item) => (
             <div
-              className="min-w-0 rounded-[14px] border border-[#E3EAF4] bg-[#FBFCFF] px-4 py-3"
+              className="grid min-w-0 gap-2 border-b border-[#E6E7ED] px-4 py-4 last:border-b-0 sm:grid-cols-[160px_minmax(0,1fr)] sm:items-center"
               key={item.label}
             >
-              <dt className="flex items-center gap-2 text-xs font-medium text-gray-500">
-                <span className="text-sm text-gray-400">{item.icon}</span>
+              <dt className="flex items-center gap-2 text-sm font-medium text-[#697386]">
+                <span className="text-[15px] text-[#8A91A0]">{item.icon}</span>
                 <span>{item.label}</span>
               </dt>
-              <dd className="mt-2 truncate text-sm font-normal text-gray-700">{item.value}</dd>
+              <dd className="m-0 truncate text-sm font-medium text-[#404858]">{item.value}</dd>
             </div>
           ))}
         </dl>
@@ -130,8 +130,10 @@ const Profile: React.FC = () => {
   const renderSecurityContent = () => (
     <>
       <div>
-        <h1 className="m-0 text-xl font-semibold text-gray-950">{t('accountSecurity')}</h1>
-        <p className="mt-2 text-sm leading-6 text-gray-500">{t('passwordDescription')}</p>
+        <h2 className="m-0 text-[18px] font-semibold leading-7 text-[#303747]">
+          {t('accountSecurity')}
+        </h2>
+        <p className="mt-1.5 text-sm leading-6 text-[#737C8E]">{t('passwordDescription')}</p>
       </div>
 
       <ChangePasswordForm loading={changePasswordLoading} onSubmit={handleChangePassword} />
@@ -141,12 +143,14 @@ const Profile: React.FC = () => {
   const renderIdentityContent = () => (
     <>
       <div>
-        <h1 className="m-0 text-xl font-semibold text-gray-950">{t('thirdPartyAccounts')}</h1>
-        <p className="mt-2 text-sm leading-6 text-gray-500">{t('thirdPartyDescription')}</p>
+        <h2 className="m-0 text-[18px] font-semibold leading-7 text-[#303747]">
+          {t('thirdPartyAccounts')}
+        </h2>
+        <p className="mt-1.5 text-sm leading-6 text-[#737C8E]">{t('thirdPartyDescription')}</p>
       </div>
 
-      <div className="mt-6 rounded-[16px] border border-dashed border-[#DDE5F0] bg-[#FBFCFF] px-6 py-10 text-center">
-        <div className="inline-flex rounded-[10px] bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-500">
+      <div className="mt-6 rounded-[10px] border border-dashed border-[#DDE0E8] bg-white/25 px-6 py-12 text-center">
+        <div className="inline-flex rounded-[7px] bg-[#EEEFF4] px-3 py-1.5 text-xs font-medium text-[#7A8292]">
           {t('comingSoon')}
         </div>
       </div>
@@ -160,27 +164,23 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <Layout>
-      <div className="w-full">
-        <section className="min-h-[calc(100vh-96px)] rounded-2xl border border-white/40 bg-white/90 p-6 shadow-xs backdrop-blur-xl">
+    <Layout backgroundVariant="market">
+      <div className="w-full py-4 sm:py-6">
+        <section className="min-h-[calc(100dvh-128px)] rounded-[14px] border border-[#E1E3EB] bg-white/[0.62] p-4 backdrop-blur-[14px] sm:p-6">
           <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <Title className="text-gray-900" level={2}>
-              {t('title')}
-            </Title>
+            <h1 className="m-0 text-[24px] font-semibold leading-8 text-[#303747]">{t('title')}</h1>
             <Button
-              className="w-fit rounded-lg"
-              icon={<ArrowRightOutlined />}
-              iconPosition="end"
+              className="h-9 w-fit rounded-[8px] border-0 bg-[#EFEDFB] px-3.5 text-sm font-medium text-[#625DE2] shadow-none hover:!bg-[#E8E5F8] hover:!text-[#514BCB]"
+              icon={<TeamOutlined />}
               onClick={() => navigate('/consumers')}
-              type="primary"
             >
               {t('manageConsumers')}
             </Button>
           </div>
 
-          <div className="grid w-full gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+          <div className="grid w-full gap-5 lg:grid-cols-[248px_minmax(0,1fr)]">
             <aside className="min-w-0">
-              <div className="rounded-[16px] border border-[#E6ECF5] bg-[#FBFCFF] p-4">
+              <div className="rounded-[12px] border border-[#E1E3EB] bg-white/38 p-4">
                 {loadingProfile ? (
                   <div>
                     <Skeleton.Avatar active size={64} />
@@ -191,22 +191,22 @@ const Profile: React.FC = () => {
                     {avatar ? (
                       <img
                         alt={displayName}
-                        className="h-12 w-12 rounded-full object-cover"
+                        className="h-12 w-12 rounded-[10px] object-cover"
                         src={avatar}
                       />
                     ) : (
-                      <div className="flex h-12 w-12 items-center justify-center rounded-[16px] border border-[#E3EAF4] bg-white text-lg font-semibold text-gray-600">
+                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-[10px] border border-white/70 bg-white/65 text-lg font-semibold text-[#5F687A]">
                         {getInitials(displayName)}
                       </div>
                     )}
                     <div className="min-w-0">
-                      <div className="truncate text-base font-medium text-gray-800">
+                      <div className="truncate text-base font-semibold text-[#303747]">
                         {displayName}
                       </div>
                       {displayEmail && (
-                        <div className="mt-1 truncate text-xs text-gray-400">{displayEmail}</div>
+                        <div className="mt-1 truncate text-xs text-[#858C9B]">{displayEmail}</div>
                       )}
-                      <div className="mt-2 inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                      <div className="mt-2 inline-flex rounded-[6px] bg-[#EDF6F1] px-2 py-0.5 text-[11px] font-medium text-[#4F7A63]">
                         {t('activeAccount')}
                       </div>
                     </div>
@@ -219,25 +219,23 @@ const Profile: React.FC = () => {
 
                     return (
                       <button
-                        className={`flex w-full items-center gap-3 rounded-[12px] px-3 py-3 text-left text-sm font-medium transition-colors ${
+                        className={`flex w-full items-center gap-3 rounded-[8px] px-3 py-2.5 text-left text-sm font-medium transition-colors ${
                           isActive
-                            ? 'bg-white text-colorPrimary shadow-[0_1px_4px_rgba(66,76,112,0.08)]'
-                            : 'text-gray-600 hover:bg-white hover:text-gray-950'
+                            ? 'bg-[#EFEDFB] text-[#4D5262]'
+                            : 'text-[#646D7E] hover:bg-white/65 hover:text-[#404858]'
                         }`}
                         key={item.key}
                         onClick={() => setActiveSection(item.key)}
                         type="button"
                       >
                         <span
-                          className={`text-base ${
-                            isActive ? 'text-colorPrimary' : 'text-gray-500'
-                          }`}
+                          className={`text-base ${isActive ? 'text-[#625DE2]' : 'text-[#7D8594]'}`}
                         >
                           {item.icon}
                         </span>
                         <span className="min-w-0 flex-1 truncate">{item.label}</span>
                         {item.comingSoon && (
-                          <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">
+                          <span className="rounded-[5px] bg-[#EEEFF4] px-1.5 py-0.5 text-[10px] font-medium text-[#858C9B]">
                             {t('comingSoon')}
                           </span>
                         )}
@@ -248,7 +246,7 @@ const Profile: React.FC = () => {
               </div>
             </aside>
 
-            <main className="min-w-0 rounded-[16px] border border-[#E6ECF5] bg-white p-6 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+            <main className="min-h-[420px] min-w-0 rounded-[12px] border border-[#E1E3EB] bg-white/38 p-5 sm:p-6">
               {renderActiveContent()}
             </main>
           </div>

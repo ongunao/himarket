@@ -6,13 +6,13 @@ import { chatReducer, type ChatAction } from './useChatReducer';
 import APIs, {
   type IProductConversations,
   type IProductDetail,
-  type IAttachment,
+  type IChatAttachment,
 } from '../lib/apis';
 import { handleSSEStream } from '../lib/sse';
 import { generateConversationId, generateQuestionId } from '../lib/uuid';
 
 import type { SSEOptions } from '../lib/sse';
-import type { IModelConversation, IMcpToolCall, IMcpToolResponse } from '../types';
+import type { IChatMessageChunk, IGeneratedImage, IMcpToolCall, IMcpToolResponse } from '../types';
 
 // ============ SSE Callbacks Factory ============
 
@@ -23,6 +23,107 @@ interface SSEContext {
   fullContentRef: { current: string };
   dispatch: React.Dispatch<ChatAction>;
   setIsMcpExecuting: (v: boolean) => void;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function parseMessageChunks(messageChunks?: string): {
+  messageChunks?: IChatMessageChunk[];
+  mcpToolCalls?: IMcpToolCall[];
+  mcpToolResponses?: IMcpToolResponse[];
+} {
+  if (!messageChunks) {
+    return {};
+  }
+
+  try {
+    const messages = JSON.parse(messageChunks);
+    if (!Array.isArray(messages)) {
+      return {};
+    }
+
+    const mcpToolCalls: IMcpToolCall[] = [];
+    const mcpToolResponses: IMcpToolResponse[] = [];
+    const orderedChunks: IChatMessageChunk[] = [];
+
+    for (const message of messages) {
+      if (!isRecord(message)) {
+        continue;
+      }
+
+      if (
+        (message.type === 'ASSISTANT' || message.type === 'THINKING') &&
+        typeof message.content === 'string'
+      ) {
+        orderedChunks.push({
+          content: message.content,
+          type: message.type,
+        });
+        continue;
+      }
+
+      if (message.type === 'IMAGE' && typeof message.attachmentId === 'string') {
+        orderedChunks.push({
+          attachmentId: message.attachmentId,
+          type: 'IMAGE',
+        });
+        continue;
+      }
+
+      if (
+        message.type === 'TOOL_CALL' &&
+        typeof message.id === 'string' &&
+        typeof message.name === 'string'
+      ) {
+        orderedChunks.push({
+          arguments: message.arguments,
+          id: message.id,
+          name: message.name,
+          type: 'TOOL_CALL',
+        });
+        mcpToolCalls.push({
+          arguments: toArgumentString(message.arguments),
+          id: message.id,
+          name: message.name,
+          type: 'function',
+        });
+        continue;
+      }
+
+      if (
+        message.type === 'TOOL_RESULT' &&
+        typeof message.id === 'string' &&
+        typeof message.name === 'string'
+      ) {
+        orderedChunks.push({
+          id: message.id,
+          name: message.name,
+          result: message.result,
+          type: 'TOOL_RESULT',
+        });
+        mcpToolResponses.push({
+          id: message.id,
+          name: message.name,
+          result: message.result ?? '',
+        });
+        continue;
+      }
+    }
+
+    return {
+      mcpToolCalls: mcpToolCalls.length > 0 ? mcpToolCalls : undefined,
+      mcpToolResponses: mcpToolResponses.length > 0 ? mcpToolResponses : undefined,
+      messageChunks: orderedChunks.length > 0 ? orderedChunks : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+function toArgumentString(input: unknown): string {
+  return typeof input === 'string' ? input : JSON.stringify(input ?? {});
 }
 
 function createSSECallbacks(ctx: SSEContext): SSEOptions {
@@ -42,7 +143,6 @@ function createSSECallbacks(ctx: SSEContext): SSEOptions {
       });
     },
     onComplete: (_content: string, _chatId: string, usage) => {
-      setIsMcpExecuting(false);
       dispatch({
         payload: {
           conversationId,
@@ -55,7 +155,6 @@ function createSSECallbacks(ctx: SSEContext): SSEOptions {
       });
     },
     onError: (errorMsg: string) => {
-      setIsMcpExecuting(false);
       dispatch({
         payload: {
           conversationId,
@@ -65,6 +164,29 @@ function createSSECallbacks(ctx: SSEContext): SSEOptions {
           questionId,
         },
         type: 'SEND_ERROR',
+      });
+    },
+    onImage: (image: IGeneratedImage) => {
+      dispatch({
+        payload: {
+          conversationId,
+          fullContent: fullContentRef.current,
+          image,
+          modelId,
+          questionId,
+        },
+        type: 'ADD_IMAGE',
+      });
+    },
+    onThinking: (content: string) => {
+      dispatch({
+        payload: {
+          content,
+          conversationId,
+          modelId,
+          questionId,
+        },
+        type: 'APPEND_THINKING',
       });
     },
     onToolCall: (toolCall: IMcpToolCall) => {
@@ -87,7 +209,6 @@ function createSSECallbacks(ctx: SSEContext): SSEOptions {
 // ============ SSE Request Helper ============
 
 async function executeSSERequest(
-  _modelId: string,
   messagePayload: Record<string, unknown>,
   abortController: AbortController,
   sseCallbacks: SSEOptions,
@@ -117,125 +238,145 @@ export function useChatSession() {
   const [generating, setGenerating] = useState(false);
   const [isMcpExecuting, setIsMcpExecuting] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string>();
+  const [streamingQuestionId, setStreamingQuestionId] = useState<string>();
   const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
-  const abortControllersRef = useRef<AbortController[]>([]);
+  const abortControllerRef = useRef<AbortController>();
 
-  // 停止生成
   const handleStop = useCallback(() => {
-    abortControllersRef.current.forEach((c) => c.abort());
-    abortControllersRef.current = [];
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = undefined;
+    dispatch({ type: 'CLEAR_LOADING' });
     setGenerating(false);
     setIsMcpExecuting(false);
+    setStreamingQuestionId(undefined);
   }, []);
 
-  // 新建会话
   const handleNewChat = useCallback(() => {
+    handleStop();
     dispatch({ type: 'RESET' });
     setCurrentSessionId(undefined);
-  }, []);
+  }, [handleStop]);
 
-  // 发送消息
   const sendMessage = useCallback(
     async (
       content: string,
       mcps: IProductDetail[],
       enableWebSearch: boolean,
+      enableThinking: boolean,
       modelMap: Map<string, IProductDetail>,
       selectedModel: IProductDetail,
-      attachments: IAttachment[] = [],
+      attachments: IChatAttachment[] = [],
     ) => {
+      const modelId = state[0]?.id ?? selectedModel.productId;
+      const conversationId = generateConversationId();
+      const questionId = generateQuestionId();
+      const abortController = new AbortController();
+      let conversationAdded = false;
+      abortControllerRef.current = abortController;
+
       try {
         setGenerating(true);
 
-        // 如果没有会话，先创建
         let sessionId = currentSessionId;
         if (!sessionId) {
           const sessionResponse = await APIs.createSession({
             name: content.length > 20 ? content.substring(0, 20) + '...' : content,
-            products: state.length ? state.map((v) => v.id) : [selectedModel.productId],
+            products: [modelId],
             talkType: 'MODEL',
           });
-          if (sessionResponse.code === 'SUCCESS') {
-            sessionId = sessionResponse.data.sessionId;
-            setCurrentSessionId(sessionId);
-            setSidebarRefreshTrigger((prev) => prev + 1);
-          } else {
-            setGenerating(false);
-            throw new Error(t('session.createFailed'));
+          if (sessionResponse.code !== 'SUCCESS' || !sessionResponse.data?.sessionId) {
+            antdMessage.error(t('session.createFailed'));
+            return;
           }
+          sessionId = sessionResponse.data.sessionId;
+          setCurrentSessionId(sessionId);
+          setSidebarRefreshTrigger((prev) => prev + 1);
         }
 
-        const conversationId = generateConversationId();
-        const questionId = generateQuestionId();
+        if (!sessionId) {
+          antdMessage.error(t('session.missingId'));
+          return;
+        }
 
-        if (!sessionId) throw new Error(t('session.missingId'));
+        const model = modelMap.get(modelId) ?? selectedModel;
+        const messagePayload = {
+          attachments: attachments.map((attachment) => ({
+            attachmentId: attachment.attachmentId,
+          })),
+          conversationId,
+          enableThinking: enableThinking && Boolean(model.feature?.modelFeature?.enableThinking),
+          enableWebSearch: enableWebSearch && Boolean(model.feature?.modelFeature?.webSearch),
+          mcpProducts: mcps.map((mcp) => mcp.productId),
+          productId: modelId,
+          question: content,
+          questionId,
+          sessionId,
+          stream: true,
+        };
 
-        const modelIds = state.length ? state.map((m) => m.id) : [selectedModel.productId];
-        abortControllersRef.current = [];
-
-        const requests = modelIds.map(async (modelId) => {
-          const abortController = new AbortController();
-          abortControllersRef.current.push(abortController);
-
-          const isSupport = modelMap.get(modelId)?.feature?.modelFeature?.webSearch || false;
-          const messagePayload = {
-            attachments: attachments.map((a) => ({ attachmentId: a.attachmentId })),
+        setStreamingQuestionId(questionId);
+        dispatch({
+          payload: {
+            attachments,
+            content,
             conversationId,
-            enableWebSearch: enableWebSearch ? isSupport : false,
-            mcpProducts: mcps.map((mcp) => mcp.productId),
-            needMemory: true,
-            productId: modelId,
-            question: content,
+            modelId,
             questionId,
             sessionId,
-            stream: true,
-          };
+          },
+          type: 'ADD_CONVERSATION',
+        });
+        conversationAdded = true;
 
-          // 添加对话到 state
-          dispatch({
-            payload: {
-              attachments,
-              content,
-              conversationId,
-              modelId,
-              questionId,
-              selectedModelId: selectedModel.productId,
-              sessionId: currentSessionId,
-            },
-            type: 'ADD_CONVERSATION',
-          });
-
-          const fullContentRef = { current: '' };
-          const sseCallbacks = createSSECallbacks({
+        const fullContentRef = { current: '' };
+        await executeSSERequest(
+          messagePayload,
+          abortController,
+          createSSECallbacks({
             conversationId,
             dispatch,
             fullContentRef,
             modelId,
             questionId,
             setIsMcpExecuting,
-          });
-
-          await executeSSERequest(modelId, messagePayload, abortController, sseCallbacks);
-        });
-
-        await Promise.allSettled(requests);
-        setGenerating(false);
-        abortControllersRef.current = [];
+          }),
+        );
       } catch (error) {
-        dispatch({ payload: { errorMsg: t('messages.networkError') }, type: 'GLOBAL_ERROR' });
-        setGenerating(false);
-        console.error('Failed to send message:', error);
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          if (conversationAdded) {
+            dispatch({
+              payload: {
+                conversationId,
+                errorMsg: t('messages.networkError'),
+                modelId,
+                questionId,
+              },
+              type: 'GLOBAL_ERROR',
+            });
+          } else {
+            antdMessage.error(t('messages.networkError'));
+          }
+          console.error('Failed to send message:', error);
+        }
+      } finally {
+        if (abortControllerRef.current === abortController) {
+          abortControllerRef.current = undefined;
+          dispatch({ type: 'CLEAR_LOADING' });
+          setGenerating(false);
+          setIsMcpExecuting(false);
+        }
+        setStreamingQuestionId((value) => (value === questionId ? undefined : value));
       }
     },
     [currentSessionId, state, t],
   );
 
-  // 重新生成答案
   const regenerateMessage = useCallback(
     async ({
       attachments = [],
       content,
       conversationId,
+      enableThinking,
       enableWebSearch,
       mcps,
       modelId,
@@ -248,21 +389,25 @@ export function useChatSession() {
       content: string;
       mcps: IProductDetail[];
       enableWebSearch: boolean;
+      enableThinking?: boolean;
       modelMap: Map<string, IProductDetail>;
-      attachments?: IAttachment[];
+      attachments?: IChatAttachment[];
     }) => {
       setGenerating(true);
+      setStreamingQuestionId(questionId);
       const abortController = new AbortController();
-      abortControllersRef.current = [abortController];
+      abortControllerRef.current = abortController;
 
       const isSupportWebSearch = modelMap.get(modelId)?.feature?.modelFeature?.webSearch || false;
+      const isThinkingSupport =
+        modelMap.get(modelId)?.feature?.modelFeature?.enableThinking || false;
       try {
         const messagePayload = {
           attachments: attachments.map((a) => ({ attachmentId: a.attachmentId })),
           conversationId,
+          enableThinking: enableThinking ? isThinkingSupport : false,
           enableWebSearch: enableWebSearch ? isSupportWebSearch : false,
           mcpProducts: mcps.map((mcp) => mcp.productId),
-          needMemory: true,
           productId: modelId,
           question: content,
           questionId,
@@ -270,19 +415,16 @@ export function useChatSession() {
           stream: true,
         };
 
-        // 设置 loading 和 isNewQuestion
         dispatch({ payload: { conversationId, loading: true, modelId }, type: 'SET_LOADING' });
         dispatch({ payload: { conversationId, modelId, questionId }, type: 'SET_NEW_QUESTION' });
-        // 预先创建新的空 answer，避免重新生成期间显示旧 answer 的工具调用
+        // Keep streamed content and tool events separate from the previous answer.
         dispatch({
           payload: { conversationId, modelId, questionId },
           type: 'PREPARE_REGENERATE',
         });
 
         const fullContentRef = { current: '' };
-        const lastIdxRef = { current: 1 };
 
-        // 创建 regenerate 专用的 SSE 回调（onChunk 和 onComplete 逻辑不同）
         const sseCallbacks: SSEOptions = {
           ...createSSECallbacks({
             conversationId,
@@ -294,25 +436,18 @@ export function useChatSession() {
           }),
           onChunk: (chunk: string) => {
             fullContentRef.current += chunk;
-            // regenerate 时需要追加新 answer 或更新最后一个 answer
             dispatch({
               payload: {
                 chunk,
                 conversationId,
                 fullContent: fullContentRef.current,
-                lastIdx: lastIdxRef.current,
                 modelId,
                 questionId,
               },
               type: 'REGENERATE_CHUNK',
             });
-            if (lastIdxRef.current === -1) {
-              lastIdxRef.current = 1; // 标记已初始化
-            }
           },
           onComplete: (_content: string, _chatId: string, usage) => {
-            setIsMcpExecuting(false);
-            // regenerate 完成时更新最后一个 answer 的 usage
             dispatch({
               payload: {
                 conversationId,
@@ -323,11 +458,8 @@ export function useChatSession() {
               },
               type: 'COMPLETE',
             });
-            setGenerating(false);
           },
           onError: (errorMsg: string) => {
-            setIsMcpExecuting(false);
-            // regenerate 错误时追加一个错误 answer
             dispatch({
               payload: {
                 conversationId,
@@ -336,94 +468,105 @@ export function useChatSession() {
                 modelId,
                 questionId,
               },
-              type: 'ERROR',
+              type: 'SEND_ERROR',
             });
-            setGenerating(false);
           },
         };
 
-        await executeSSERequest(modelId, messagePayload, abortController, sseCallbacks);
+        await executeSSERequest(messagePayload, abortController, sseCallbacks);
       } catch (error) {
-        setGenerating(false);
-        console.error('Failed to generate message:', error);
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          dispatch({
+            payload: {
+              conversationId,
+              errorMsg: t('messages.networkError'),
+              modelId,
+              questionId,
+            },
+            type: 'GLOBAL_ERROR',
+          });
+          console.error('Failed to generate message:', error);
+        }
+      } finally {
+        if (abortControllerRef.current === abortController) {
+          abortControllerRef.current = undefined;
+          dispatch({ type: 'CLEAR_LOADING' });
+          setGenerating(false);
+          setIsMcpExecuting(false);
+        }
+        setStreamingQuestionId((value) => (value === questionId ? undefined : value));
       }
     },
-    [currentSessionId],
+    [currentSessionId, t],
   );
 
-  // 选择历史会话
   const handleSelectSession = useCallback(
     async (sessionId: string) => {
       if (currentSessionId === sessionId) return;
-      setGenerating(false);
+      handleStop();
 
       try {
         setCurrentSessionId(sessionId);
         const response = await APIs.getConversationsV2(sessionId);
 
         if (response.code === 'SUCCESS' && response.data) {
-          const models: IProductConversations[] = response.data;
-          const m: IModelConversation[] = models.map((model) => ({
-            conversations: model.conversations.map((conversation) => ({
-              id: conversation.conversationId,
-              loading: false,
-              questions: conversation.questions.map((question) => {
-                const activeAnswerIndex = question.answers.length - 1;
+          const model: IProductConversations | undefined = response.data[0];
+          if (!model) {
+            dispatch({ type: 'RESET' });
+            return;
+          }
 
-                return {
-                  activeAnswerIndex,
-                  answers: question.answers.map((answer) => {
-                    const toolCalls = answer.toolCalls || [];
-
-                    const mcpToolCalls: IMcpToolCall[] = toolCalls.map((tc) => ({
-                      arguments:
-                        typeof tc.arguments === 'string'
-                          ? tc.arguments
-                          : JSON.stringify(tc.arguments),
-                      id: tc.id,
-                      mcpServerName: tc.mcpServerName,
-                      name: tc.name,
-                      type: 'function',
-                    }));
-
-                    const mcpToolResponses: IMcpToolResponse[] = toolCalls
-                      .filter((tc) => tc.result !== undefined && tc.result !== null)
-                      .map((tc) => ({ id: tc.id, name: tc.name, result: tc.result }));
+          dispatch({
+            payload: [
+              {
+                conversations: model.conversations.map((conversation) => ({
+                  id: conversation.conversationId,
+                  loading: false,
+                  questions: conversation.questions.map((question) => {
+                    const activeAnswerIndex = question.answers.length - 1;
 
                     return {
-                      content: answer.content,
-                      errorMsg: '',
-                      firstTokenTime: answer.usage?.firstByteTimeout || 0,
-                      inputTokens: answer.usage?.inputTokens || 0,
-                      mcpToolCalls: mcpToolCalls.length > 0 ? mcpToolCalls : undefined,
-                      mcpToolResponses: mcpToolResponses.length > 0 ? mcpToolResponses : undefined,
-                      outputTokens: answer.usage?.outputTokens || 0,
-                      totalTime: answer.usage?.elapsedTime || 0,
+                      activeAnswerIndex,
+                      answers: question.answers.map((answer) => {
+                        const { mcpToolCalls, mcpToolResponses, messageChunks } =
+                          parseMessageChunks(answer.messageChunks);
+
+                        return {
+                          content: answer.content,
+                          errorMsg: '',
+                          firstTokenTime: answer.usage?.firstByteTimeout || 0,
+                          inputTokens: answer.usage?.inputTokens || 0,
+                          mcpToolCalls,
+                          mcpToolResponses,
+                          messageChunks,
+                          outputTokens: answer.usage?.outputTokens || 0,
+                          totalTime: answer.usage?.elapsedTime || 0,
+                        };
+                      }),
+                      attachments: question.attachments,
+                      content: question.content,
+                      createdAt: question.createdAt,
+                      id: question.questionId,
+                      isNewQuestion: false,
                     };
                   }),
-                  attachments: question.attachments,
-                  content: question.content,
-                  createdAt: question.createdAt,
-                  id: question.questionId,
-                  isNewQuestion: false,
-                };
-              }),
-            })),
-            id: model.productId,
-            name: '-',
-            sessionId,
-          }));
-          dispatch({ payload: m, type: 'SET_CONVERSATIONS' });
+                })),
+                id: model.productId,
+                name: '-',
+                sessionId,
+              },
+            ],
+            type: 'SET_CONVERSATIONS',
+          });
         }
       } catch (error) {
         console.error('Failed to load conversation:', error);
         antdMessage.error(t('session.loadHistoryFailed'));
       }
     },
-    [currentSessionId, t],
+    [currentSessionId, handleStop, t],
   );
 
-  // 切换活跃答案
   const onChangeActiveAnswer = useCallback(
     (modelId: string, conversationId: string, questionId: string, direction: 'prev' | 'next') => {
       dispatch({
@@ -434,26 +577,7 @@ export function useChatSession() {
     [],
   );
 
-  // 添加模型
-  const addModels = useCallback(
-    (modelIds: string[], selectedModelId?: string) => {
-      setCurrentSessionId(undefined);
-      dispatch({
-        payload: { modelIds, selectedModelId, sessionId: currentSessionId },
-        type: 'ADD_MODELS',
-      });
-    },
-    [currentSessionId],
-  );
-
-  // 关闭模型
-  const closeModel = useCallback((modelId: string) => {
-    dispatch({ payload: { modelId }, type: 'CLOSE_MODEL' });
-  }, []);
-
   return {
-    addModels,
-    closeModel,
     currentSessionId,
     dispatch,
     generating,
@@ -467,5 +591,6 @@ export function useChatSession() {
     sendMessage,
     setCurrentSessionId,
     sidebarRefreshTrigger,
+    streamingQuestionId,
   };
 }

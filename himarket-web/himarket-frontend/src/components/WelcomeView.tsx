@@ -1,5 +1,5 @@
 import { Button } from 'antd';
-import { MessageSquare, Code2, Sparkles, Zap, Bot, Globe } from 'lucide-react';
+import { Code2, LockKeyhole, Paperclip, Plus, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
@@ -9,83 +9,78 @@ interface WelcomeViewProps {
   type: 'chat' | 'coding';
 }
 
-const chatFeatures = [
-  {
-    descKey: 'chat.features.modelConversation.desc',
-    icon: <Bot size={20} />,
-    titleKey: 'chat.features.modelConversation.title',
-  },
-  {
-    descKey: 'chat.features.modelCompare.desc',
-    icon: <Sparkles size={20} />,
-    titleKey: 'chat.features.modelCompare.title',
-  },
-  {
-    descKey: 'chat.features.mcpIntegration.desc',
-    icon: <Globe size={20} />,
-    titleKey: 'chat.features.mcpIntegration.title',
-  },
-];
-
-const codingFeatures = [
-  {
-    descKey: 'coding.features.aiCoding.desc',
-    icon: <Code2 size={20} />,
-    titleKey: 'coding.features.aiCoding.title',
-  },
-  {
-    descKey: 'coding.features.sandbox.desc',
-    icon: <Zap size={20} />,
-    titleKey: 'coding.features.sandbox.title',
-  },
-  {
-    descKey: 'coding.features.interactive.desc',
-    icon: <MessageSquare size={20} />,
-    titleKey: 'coding.features.interactive.title',
-  },
-];
-
 export function WelcomeView({ type }: WelcomeViewProps) {
   const { login } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation('welcome');
 
   const isChatType = type === 'chat';
-  const title = isChatType ? 'HiChat' : 'HiCoding';
-  const subtitle = isChatType ? t('chat.subtitle') : t('coding.subtitle');
-  const features = isChatType ? chatFeatures : codingFeatures;
-  const ctaText = isChatType ? t('chat.cta') : t('coding.cta');
+  const namespace = isChatType ? 'chat' : 'coding';
+  const productName = isChatType ? 'Chat' : 'Coding';
 
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4">
-      <div className="max-w-2xl w-full text-center">
-        <h1 className="text-4xl font-bold mb-3 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          {title}
-        </h1>
-        <p className="text-gray-500 text-lg mb-10">{subtitle}</p>
+    <div className="flex min-h-[calc(100dvh-76px)] w-full items-center justify-center px-4 py-10">
+      <section className="w-full max-w-[860px]">
+        <header className="text-center">
+          <h1 className="m-0 text-[34px] font-semibold leading-[44px] text-[#303747] antialiased">
+            <span className="text-colorPrimary">Hi</span>
+            {productName}
+          </h1>
+          <p className="mt-2 text-base leading-7 text-[#737C8E]">{t(`${namespace}.subtitle`)}</p>
+        </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
-          {features.map((f, i) => (
-            <div
-              className="bg-white/60 backdrop-blur-sm rounded-[10px] p-5 text-left border border-gray-100 hover:shadow-md transition-shadow"
-              key={i}
-            >
-              <div className="text-blue-500 mb-3">{f.icon}</div>
-              <div className="font-medium text-gray-800 mb-1">{t(f.titleKey)}</div>
-              <div className="text-gray-500 text-sm">{t(f.descKey)}</div>
+        <div className="mx-auto mt-8 max-w-[760px] rounded-[14px] border border-[#DFE2E9] bg-white/[0.58] p-4 shadow-[0_12px_40px_rgba(67,72,104,0.05)] backdrop-blur-[18px] sm:p-5">
+          <div className="min-h-[88px] text-left text-sm text-[#9AA1AE] sm:text-base">
+            {t(`${namespace}.placeholder`)}
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-1.5 text-[#858D9C]">
+              {isChatType ? (
+                <span className="flex h-8 w-8 items-center justify-center rounded-[8px]">
+                  <Plus aria-hidden="true" size={18} strokeWidth={1.8} />
+                </span>
+              ) : (
+                <span className="flex h-8 w-8 items-center justify-center rounded-[8px]">
+                  <Paperclip aria-hidden="true" size={18} strokeWidth={1.8} />
+                </span>
+              )}
+              <span className="flex h-8 items-center justify-center gap-1.5 rounded-[8px] bg-[#EFEDFB] px-2.5 text-[#6F69DF]">
+                {isChatType ? (
+                  <Paperclip aria-hidden="true" size={16} strokeWidth={1.8} />
+                ) : (
+                  <Code2 aria-hidden="true" size={16} strokeWidth={1.8} />
+                )}
+                <span className="text-xs font-medium">
+                  {isChatType ? 'MCP' : t('coding.workspace')}
+                </span>
+              </span>
+              <span className="ml-1 hidden min-w-0 items-center gap-1.5 text-xs text-[#7F8796] sm:flex">
+                <LockKeyhole aria-hidden="true" size={14} strokeWidth={1.8} />
+                <span className="truncate">{t(`${namespace}.loginHint`)}</span>
+              </span>
             </div>
-          ))}
+            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[#D9DDF6] text-white">
+              <Send aria-hidden="true" size={17} strokeWidth={1.8} />
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center justify-center gap-4">
-          <Button onClick={() => login()} size="large" type="primary">
-            {ctaText}
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
+          <Button
+            className="h-10 rounded-[8px] border-0 bg-[#6863EB] px-5 text-sm font-medium shadow-none hover:!bg-[#5D58DE]"
+            onClick={() => login()}
+            type="primary"
+          >
+            {t(`${namespace}.cta`)}
           </Button>
-          <Button onClick={() => navigate('/register')} size="large">
+          <Button
+            className="h-10 rounded-[8px] border-[#DFE1E8] bg-white/45 px-5 text-sm font-medium text-[#555E6F] shadow-none hover:!border-[#CFCCE8] hover:!bg-white/65 hover:!text-[#4943C7]"
+            onClick={() => navigate('/register')}
+          >
             {t('register')}
           </Button>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

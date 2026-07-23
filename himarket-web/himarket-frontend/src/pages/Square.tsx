@@ -33,14 +33,13 @@ function Square(props: { activeType: string }) {
   const [searchQuery, setSearchQuery] = useState('');
   const searchQueryRef = useRef('');
   const [products, setProducts] = useState<IProductDetail[]>([]);
-  const [categories, setCategories] = useState<Array<{ id: string; name: string; count: number }>>(
-    [],
-  );
+  const [categories, setCategories] = useState<
+    Array<{ id: string; icon?: string; name: string; count: number }>
+  >([]);
   const [loading, setLoading] = useState(true);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [sortBy, setSortBy] = useState<string>('DOWNLOAD_COUNT');
 
-  const showSortControl = activeType === 'AGENT_SKILL' || activeType === 'WORKER';
   const useNewLayout =
     activeType === 'MCP_SERVER' ||
     activeType === 'AGENT_API' ||
@@ -48,6 +47,8 @@ function Square(props: { activeType: string }) {
     activeType === 'REST_API' ||
     activeType === 'AGENT_SKILL' ||
     activeType === 'WORKER';
+  const showSortControl = activeType === 'AGENT_SKILL' || activeType === 'WORKER';
+  const useMarketAppearance = useNewLayout;
   const enableSortControl = useNewLayout || showSortControl;
 
   // 分页相关状态
@@ -79,6 +80,7 @@ function Square(props: { activeType: string }) {
         if (response.code === 'SUCCESS' && response.data?.content) {
           const categoryList = response.data.content.map((cat: ICategory) => ({
             count: 0,
+            icon: cat.icon?.value ? getIconString(cat.icon, cat.name) : undefined,
             id: cat.categoryId,
             name: cat.name,
           }));
@@ -257,6 +259,7 @@ function Square(props: { activeType: string }) {
   const productCards = filteredModels.map((product) =>
     product.type === 'AGENT_SKILL' ? (
       <SkillCard
+        appearance="market"
         author={getSkillLatestAuthor(product.skillConfig)}
         authorPrefix={t('author')}
         description={product.description || t('noDescription')}
@@ -270,6 +273,7 @@ function Square(props: { activeType: string }) {
       />
     ) : product.type === 'WORKER' ? (
       <WorkerCard
+        appearance="market"
         author={getWorkerLatestAuthor(product.workerConfig)}
         authorPrefix={t('author')}
         description={product.description || t('noDescription')}
@@ -283,6 +287,7 @@ function Square(props: { activeType: string }) {
       />
     ) : (
       <ModelCard
+        appearance="market"
         description={product.description || t('noDescription')}
         icon={getIconString(product.icon, product.name)}
         key={product.productId}
@@ -308,7 +313,7 @@ function Square(props: { activeType: string }) {
   );
 
   return (
-    <Layout>
+    <Layout backgroundVariant={useMarketAppearance ? 'market' : 'default'}>
       <div
         className="flex flex-col h-[calc(100vh-96px)] overflow-auto scrollbar-hide"
         ref={scrollContainerRef}
@@ -317,6 +322,7 @@ function Square(props: { activeType: string }) {
           // Product market list: MCP / Agent / Model / API / Skill / Worker
           <ProductMarketLayout
             activeCategory={activeCategory}
+            appearance={useMarketAppearance ? 'market' : 'default'}
             categories={categories}
             categoriesLoading={categoriesLoading}
             categoryLabel={t('category')}
