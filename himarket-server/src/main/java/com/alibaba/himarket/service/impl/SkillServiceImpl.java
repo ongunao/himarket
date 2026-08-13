@@ -72,7 +72,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Transactional
 public class SkillServiceImpl implements SkillService {
 
-    private static final long MAX_ZIP_SIZE = 10 * 1024 * 1024;
+    private static final long MAX_ZIP_SIZE = 30 * 1024 * 1024;
 
     private final NacosService nacosService;
 
@@ -84,7 +84,7 @@ public class SkillServiceImpl implements SkillService {
     public void uploadPackage(String productId, MultipartFile file) throws IOException {
         if (file.isEmpty() || file.getSize() > MAX_ZIP_SIZE) {
             throw new BusinessException(
-                    ErrorCode.INVALID_PARAMETER, "ZIP file cannot be empty or exceed 10MB");
+                    ErrorCode.INVALID_PARAMETER, "ZIP file cannot be empty or exceed 30MB");
         }
 
         Product product = findProduct(productId);

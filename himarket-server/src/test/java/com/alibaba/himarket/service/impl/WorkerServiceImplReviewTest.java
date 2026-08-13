@@ -52,6 +52,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.multipart.MultipartFile;
 
 class WorkerServiceImplReviewTest {
 
@@ -72,6 +73,40 @@ class WorkerServiceImplReviewTest {
         contextHolder = mock(ContextHolder.class);
         service = new WorkerServiceImpl(nacosService, productRepository, contextHolder);
         when(contextHolder.isAdministrator()).thenReturn(true);
+    }
+
+    @Test
+    void uploadAcceptsPackageAtThirtyMegabyteLimit() throws Exception {
+        Product product = workerProduct();
+        AgentSpecMaintainerService agentSpecMaintainerService = mockAgentSpecMaintainer();
+        byte[] zipBytes = new byte[] {1, 2, 3};
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getSize()).thenReturn(30L * 1024 * 1024);
+        when(file.getBytes()).thenReturn(zipBytes);
+        when(productRepository.findByProductId(PRODUCT_ID)).thenReturn(Optional.of(product));
+
+        service.uploadPackage(PRODUCT_ID, file);
+
+        verify(agentSpecMaintainerService).uploadAgentSpecFromZip(NAMESPACE, zipBytes, true);
+    }
+
+    @Test
+    void uploadRejectsPackageLargerThanThirtyMegabyteLimit() throws Exception {
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getSize()).thenReturn(30L * 1024 * 1024 + 1);
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class, () -> service.uploadPackage(PRODUCT_ID, file));
+
+        assertEquals("INVALID_PARAMETER", exception.getCode());
+        assertEquals(
+                "Invalid request parameter: ZIP file cannot be empty or exceed 30MB",
+                exception.getMessage());
+        verify(file, never()).getBytes();
+        verify(productRepository, never()).findByProductId(PRODUCT_ID);
     }
 
     @Test

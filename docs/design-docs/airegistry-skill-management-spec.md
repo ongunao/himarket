@@ -225,7 +225,7 @@ private String contentType;
 private byte[] content;
 ```
 
-当前 Skill ZIP 限制是 10MB，首期用 byte array 返回可接受。不要把 Nacos/AIRegistry 的 SDK response、临时下载 URL 或 `HttpServletResponse` 泄漏到 `SkillServiceImpl` 的产品编排层。
+当前 Skill ZIP 限制是 30MB，使用 byte array 返回仍可接受。不要把 Nacos/AIRegistry 的 SDK response、临时下载 URL 或 `HttpServletResponse` 泄漏到 `SkillServiceImpl` 的产品编排层。
 
 ### 5.3 Nacos 实现
 
@@ -273,13 +273,13 @@ Client 构造：
 
 上传约束：
 
-- 首期沿用 Himarket 现有 10MB ZIP 限制，避免同一 UI 下 Nacos/AIRegistry 行为不一致。
+- Himarket 统一使用 30MB ZIP 限制，避免同一 UI 下 Nacos/AIRegistry 行为不一致。
 - 上传流程必须按 Java SDK 真实能力实现：
   1. 调用 `GetSkillImportFileUrl(namespaceId, contentType)` 获取 `uploadUrl`、`ossObjectName`、`maxSize`。
   2. 后端使用 HTTP PUT 把 ZIP 字节上传到 `uploadUrl`，请求 `Content-Type` 使用返回值或 `application/zip`。
   3. PUT 成功后调用 `UploadSkillViaOss(namespaceId, ossObjectName, overwrite=true, commitMsg)` 完成导入。
 - `UploadSkillViaOss` 返回的 `data` 作为 `skillName` 写入 `product.feature.skillConfig.skillName`。
-- 如果 `GetSkillImportFileUrl.maxSize` 小于 Himarket 当前 10MB 限制，以两者较小值做本次请求校验。
+- 如果 `GetSkillImportFileUrl.maxSize` 小于 Himarket 当前 30MB 限制，以两者较小值做本次请求校验。
 
 下载约束：
 
@@ -686,7 +686,7 @@ GREEN：
 
 - 引入 `SkillRegistryOperator`。
 - 先迁移上传所需的 Nacos operator 最小能力，再补 AIRegistry operator 上传能力。
-- 保持现有 10MB 校验。
+- 保持现有 30MB 校验。
 
 #### Slice 5：AIRegistry 读取与下载
 
@@ -799,6 +799,6 @@ GREEN：
 
 1. SDK 暂未暴露独立 `DeleteSkillDraft` 方法。首期 AIRegistry 来源可以返回明确“不支持删除草稿”，或确认控制台另有未生成 SDK 的接口后再补齐。
 2. SDK artifact 当前需确认 Maven 仓库可访问性；如果构建源缺少该 artifact，需要先补私服源配置。
-3. AIRegistry 和 Nacos 的 ZIP 大小上限可能不同，首期先沿用 Himarket 10MB，并同时尊重 `GetSkillImportFileUrl.maxSize`。
+3. AIRegistry 和 Nacos 的 ZIP 大小上限可能不同，统一使用 Himarket 30MB 上限，并同时尊重 `GetSkillImportFileUrl.maxSize`。
 4. AIRegistry 的权限模型比 Himarket 当前管理员模型更细。首期只透传 POP 鉴权结果，不在 Himarket 内模拟 Skill owner 权限。
 5. 如果 AIRegistry `ListSkills` 默认只返回当前凭证可见资源，批量导入结果也以该可见范围为准。

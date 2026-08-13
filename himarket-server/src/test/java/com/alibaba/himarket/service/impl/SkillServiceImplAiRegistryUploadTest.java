@@ -49,6 +49,63 @@ import org.springframework.web.multipart.MultipartFile;
 class SkillServiceImplAiRegistryUploadTest {
 
     @Test
+    void uploadAcceptsPackageAtThirtyMegabyteLimit() throws Exception {
+        ProductRepository productRepository = mock(ProductRepository.class);
+        AiRegistrySkillService aiRegistrySkillService = mock(AiRegistrySkillService.class);
+        Product product =
+                aiRegistryProduct("product-a", "Skill A", "airegistry-prod", "ns-prod", null);
+        byte[] zipBytes = skillZip("skill-a");
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getSize()).thenReturn(30L * 1024 * 1024);
+        when(file.getOriginalFilename()).thenReturn("skill.zip");
+        when(file.getBytes()).thenReturn(zipBytes);
+        when(productRepository.findByProductId("product-a")).thenReturn(Optional.of(product));
+        when(productRepository.findAllByType(ProductType.AGENT_SKILL)).thenReturn(List.of(product));
+        when(aiRegistrySkillService.uploadFromZip(
+                        "airegistry-prod", "ns-prod", zipBytes, "skill.zip", true))
+                .thenReturn("skill-a");
+
+        SkillServiceImpl service =
+                new SkillServiceImpl(
+                        mock(NacosService.class),
+                        productRepository,
+                        mock(ContextHolder.class),
+                        aiRegistrySkillService);
+
+        service.uploadPackage("product-a", file);
+
+        verify(aiRegistrySkillService)
+                .uploadFromZip("airegistry-prod", "ns-prod", zipBytes, "skill.zip", true);
+    }
+
+    @Test
+    void uploadRejectsPackageLargerThanThirtyMegabyteLimit() throws Exception {
+        ProductRepository productRepository = mock(ProductRepository.class);
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getSize()).thenReturn(30L * 1024 * 1024 + 1);
+
+        SkillServiceImpl service =
+                new SkillServiceImpl(
+                        mock(NacosService.class),
+                        productRepository,
+                        mock(ContextHolder.class),
+                        mock(AiRegistrySkillService.class));
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class, () -> service.uploadPackage("product-a", file));
+
+        assertEquals("INVALID_PARAMETER", exception.getCode());
+        assertEquals(
+                "Invalid request parameter: ZIP file cannot be empty or exceed 30MB",
+                exception.getMessage());
+        verify(file, never()).getBytes();
+        verify(productRepository, never()).findByProductId("product-a");
+    }
+
+    @Test
     void aiRegistryFirstUploadWritesReturnedSkillNameBackToProductConfig() throws Exception {
         ProductRepository productRepository = mock(ProductRepository.class);
         AiRegistrySkillService aiRegistrySkillService = mock(AiRegistrySkillService.class);
